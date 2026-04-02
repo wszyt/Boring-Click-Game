@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Boring Click Game</title>
+  <!-- 引入 Tailwind CSS 用于快速页面布局和基础样式 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 全局样式禁止文本选中，优化快速点击体验 */
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(180deg, #1e3a5f 0%, #2d5a87 30%, #3d7cb3 50%, #8b6f47 50%, #6b5337 70%, #4a3728 100%);
+    }
+
+    /* 动态背景天空 - 增强渐变效果 */
+    #sky {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 60%;
+      background: linear-gradient(180deg, #0ea5e9 0%, #38bdf8 30%, #7dd3fc 60%, #bae6fd 100%);
+      z-index: 1;
+    }
+
+    /* 动态背景地面 - 更丰富的层次 */
+    #ground {
+      position: absolute;
+      bottom: 0; left: 0; width: 100%; height: 40%;
+      background: linear-gradient(180deg, #4ade80 0%, #22c55e 10%, #16a34a 20%, #854d0e 25%, #713f12 40%, #522a0f 60%, #3d1f0b 100%);
+      border-top: 8px solid #86efac;
+      box-shadow: 0 -10px 40px rgba(74, 222, 128, 0.3);
+      z-index: 2;
+    }
+
+    /* 太阳呼吸灯动画 - 更柔和的光晕 */
+    .sun {
+      position: absolute;
+      top: 40px; right: 60px;
+      width: 100px; height: 100px;
+      background: radial-gradient(circle, #fef3c7 0%, #fde047 40%, #fbbf24 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 60px #fbbf24, 0 0 120px #f59e0b, 0 0 180px rgba(251, 191, 36, 0.4);
+      animation: sunPulse 5s infinite alternate cubic-bezier(0.4, 0, 0.6, 1);
+      z-index: 3;
+    }
+    @keyframes sunPulse {
+      0% { transform: scale(1) rotate(0deg); box-shadow: 0 0 50px #fbbf24, 0 0 100px #f59e0b; }
+      100% { transform: scale(1.2) rotate(5deg); box-shadow: 0 0 80px #fbbf24, 0 0 160px #f59e0b, 0 0 240px rgba(251, 191, 36, 0.6); }
+    }
+
+    /* 云朵飘动动画 - 更流畅的缓动 */
+    .cloud-wrap {
+      position: absolute;
+      z-index: 3;
+      opacity: 0.85;
+      will-change: transform;
+      filter: drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3));
+    }
+    @keyframes floatCloud {
+      0% { transform: translateX(-250px) scale(var(--scale, 1)); }
+      100% { transform: translateX(110vw) scale(var(--scale, 1)); }
+    }
+
+    /* 树木容器，固定在地面分界线 */
+    #tree-container {
+      position: absolute;
+      bottom: 40%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      pointer-events: none;
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+    }
+
+    /* 树木生长时的弹性动画 - 更流畅 */
+    .tree-svg {
+      transform-origin: bottom center;
+      animation: growBounce 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: block;
+      transition: filter 0.3s ease;
+    }
+    .tree-svg:hover {
+      filter: brightness(1.1) drop-shadow(0 12px 24px rgba(0,0,0,0.4));
+    }
+    @keyframes growBounce {
+      0% { transform: scale(0.2); opacity: 0; filter: brightness(2); }
+      40% { transform: scale(1.15); filter: brightness(1.3); }
+      70% { transform: scale(0.95); filter: brightness(0.95); }
+      100% { transform: scale(1); opacity: 1; filter: brightness(1); }
+    }
+
+    /* 漂浮的 +1 文字动画 - 更华丽 */
+    .floating-number {
+      position: absolute;
+      color: #fbbf24;
+      font-size: 36px;
+      font-weight: 900;
+      pointer-events: none;
+      text-shadow: 0 4px 0 #f59e0b, 0 6px 12px rgba(0,0,0,0.5), 0 0 20px rgba(251, 191, 36, 0.6);
+      animation: floatUp 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      z-index: 100;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translate(0, 0) scale(0.6) rotate(-10deg); }
+      20% { transform: translate(calc(var(--drift) * 0.3), -40px) scale(1.3) rotate(5deg); }
+      100% { opacity: 0; transform: translate(var(--drift), -180px) scale(1) rotate(0deg); }
+    }
+
+    /* 升级时的粒子特效 - 更绚丽 */
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 50;
+      animation: particleExplode 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+      box-shadow: 0 0 12px currentColor;
+    }
+    @keyframes particleExplode {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--vx), var(--vy)) scale(0); opacity: 0; }
+    }
+
+    /* 升级时文字弹跳动画 - 更生动 */
+    .pop-text {
+      animation: popTextAnim 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    @keyframes popTextAnim {
+      0% { transform: scale(1); color: #16a34a; text-shadow: none; }
+      50% { transform: scale(1.5); color: #f59e0b; text-shadow: 0 0 20px #fcd34d, 0 0 40px #fbbf24; }
+      100% { transform: scale(1); color: #16a34a; text-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    }
+
+    /* 自定义下拉框选项样式 */
+    #path-select option {
+      background-color: #047857;
+      color: white;
+      padding: 12px 20px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    #lang-select option {
+      background-color: #1d4ed8;
+      color: white;
+      padding: 12px 20px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body id="game-area" class="cursor-pointer">
+
+<!-- 背景元素 -->
+<div id="sky"></div>
+<div id="ground"></div>
+<div class="sun"></div>
+
+<!-- 新增语言选择器 -->
+<div class="absolute top-4 right-4 z-[100] pointer-events-auto">
+  <select id="lang-select" class="bg-gradient-to-r from-blue-400/80 to-cyan-400/80 backdrop-blur-md border-2 border-white/60 text-white py-2 px-4 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer font-bold transition-all hover:from-blue-500 hover:to-cyan-500 hover:shadow-xl hover:scale-105">
+    <option value="en">English</option>
+    <option value="zh">中文</option>
+  </select>
+</div>
+
+<!-- 动态云朵 -->
+<div class="cloud-wrap" style="top: 15%; animation: floatCloud 45s linear infinite; --scale: 1;">
+  <svg width="150" height="60" viewBox="0 0 150 60" fill="white">
+    <circle cx="30" cy="40" r="20"/><circle cx="70" cy="25" r="25"/><circle cx="110" cy="35" r="20"/><rect x="30" y="25" width="80" height="35" rx="15"/>
+  </svg>
+</div>
+<div class="cloud-wrap" style="top: 8%; animation: floatCloud 35s linear infinite; animation-delay: -15s; transform: scale(0.8); opacity: 0.6; --scale: 0.8;">
+  <svg width="150" height="60" viewBox="0 0 150 60" fill="white">
+    <circle cx="30" cy="40" r="20"/><circle cx="70" cy="25" r="25"/><circle cx="110" cy="35" r="20"/><rect x="30" y="25" width="80" height="35" rx="15"/>
+  </svg>
+</div>
+<div class="cloud-wrap" style="top: 25%; animation: floatCloud 50s linear infinite; animation-delay: -30s; transform: scale(1.2); opacity: 0.9; --scale: 1.2;">
+  <svg width="150" height="60" viewBox="0 0 150 60" fill="white">
+    <circle cx="30" cy="40" r="20"/><circle cx="70" cy="25" r="25"/><circle cx="110" cy="35" r="20"/><rect x="30" y="25" width="80" height="35" rx="15"/>
+  </svg>
+</div>
+
+<!-- 新增语言选择器 -->
+<div class="absolute top-4 right-4 z-[100] pointer-events-auto">
+  <select id="lang-select" class="bg-gradient-to-r from-blue-500/90 to-cyan-500/90 backdrop-blur-md border-2 border-white/80 text-white py-2.5 px-5 rounded-full shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-300/50 cursor-pointer font-bold transition-all duration-300 hover:from-blue-600 hover:to-cyan-600 hover:shadow-[0_8px_30px_rgba(37,99,235,0.5)] hover:scale-105 text-sm drop-shadow-[0_3px_6px_rgba(0,0,0,0.3)]">
+    <option value="en">English</option>
+    <option value="zh">中文</option>
+  </select>
+</div>
+
+<!-- UI 面板 -->
+<div id="ui-panel" class="absolute top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-br from-white/95 via-white/90 to-gray-50/95 backdrop-blur-xl px-10 py-6 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] text-center z-50 pointer-events-auto border-2 border-white/70 min-w-[400px] transition-all duration-300 hover:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.4)]">
+
+  <!-- 新增：成长路径选择器 -->
+  <div class="absolute -top-14 left-1/2 transform -translate-x-1/2 z-[99] pointer-events-auto">
+    <select id="path-select" class="bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 backdrop-blur-md border-2 border-white/90 text-white py-3.5 px-10 rounded-full shadow-[0_10px_40px_-8px_rgba(16,185,129,0.5)] focus:outline-none focus:ring-4 focus:ring-emerald-300/50 cursor-pointer font-bold transition-all duration-300 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 hover:shadow-[0_15px_50px_-8px_rgba(16,185,129,0.7)] hover:scale-105 text-base drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]">
+      <option value="tree">🌲 Tree</option>
+      <option value="chicken">🐔 Chicken</option>
+      <option value="house">🏠 House</option>
+    </select>
+  </div>
+
+  <h1 id="ui-title" class="text-4xl font-black mb-3 drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)] transition-colors text-green-700">🌲 Tree Planting</h1>
+  <p class="text-gray-700 mb-4 font-semibold text-lg"><span id="ui-current-stage">Current Stage: </span><span id="entity-name" class="font-bold inline-block transition-colors text-green-600">A Tiny Seed</span></p>
+
+  <div class="text-6xl font-black text-amber-500 mb-5 drop-shadow-[0_4px_8px_rgba(245,158,11,0.4)] tracking-tight">
+    <span id="click-count">0</span> <span id="ui-clicks-unit" class="text-2xl text-amber-600 font-bold tracking-normal">clicks</span>
+  </div>
+
+  <!-- 进度条 - 增强版 -->
+  <div class="w-full bg-gray-200/80 rounded-full h-5 mb-3 overflow-hidden shadow-inner relative border border-gray-300/50">
+    <div id="progress-fill" class="h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-green-400 via-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)]" style="width: 0%"></div>
+  </div>
+  <p id="next-goal" class="text-sm text-gray-600 font-semibold">10 more clicks to reach the next stage</p>
+
+  <p id="ui-instruction" class="text-xs text-gray-400 mt-5 border-t border-gray-200 pt-3 font-medium">👆 Click (or tap) anywhere on the screen like crazy!</p>
+</div>
+
+<!-- 实体容器 -->
+<div id="tree-container">
+  <!-- SVG 将由 JS 动态注入 -->
+</div>
+
+<script>
+  // 定义不同成长路径的数据
+  const gameData = {
+    tree: {
+      theme: { text: 'text-green-700', bg: 'bg-green-500', nameText: 'text-green-600', fill: 'from-green-400 via-green-500 to-green-600' },
+      stages: [
+        { clicks: 0, svg: `<svg width="50" height="30" viewBox="0 0 50 30" class="tree-svg"><ellipse cx="25" cy="20" rx="15" ry="10" fill="#6D4C41" stroke="#4E342E" stroke-width="2"/><path d="M20 15 Q25 10 30 15" stroke="#4E342E" stroke-width="1.5" fill="none"/></svg>` },
+        { clicks: 10, svg: `<svg width="70" height="60" viewBox="0 0 70 60" class="tree-svg"><path d="M35 50 Q30 30 20 20 Q35 25 38 35 Z" fill="#8BC34A"/><ellipse cx="35" cy="50" rx="12" ry="8" fill="#5D4037"/></svg>` },
+        { clicks: 30, svg: `<svg width="100" height="100" viewBox="0 0 100 100" class="tree-svg"><path d="M50 100 Q50 60 50 40" stroke="#7CB342" stroke-width="6" stroke-linecap="round"/><path d="M50 70 Q30 50 15 55 Q35 65 45 75 Z" fill="#8BC34A"/><path d="M50 55 Q70 30 85 40 Q65 55 55 60 Z" fill="#689F38"/><path d="M50 40 Q40 20 50 10 Q60 20 50 40 Z" fill="#9CCC65"/></svg>` },
+        { clicks: 60, svg: `<svg width="150" height="180" viewBox="0 0 150 180" class="tree-svg"><path d="M75 180 Q75 100 75 50" stroke="#795548" stroke-width="10" stroke-linecap="round"/><path d="M75 120 Q50 90 35 80" stroke="#795548" stroke-width="6" stroke-linecap="round"/><path d="M75 90 Q105 60 115 50" stroke="#795548" stroke-width="6" stroke-linecap="round"/><circle cx="35" cy="70" r="30" fill="#8BC34A"/><circle cx="115" cy="40" r="35" fill="#689F38"/><circle cx="75" cy="45" r="45" fill="#4CAF50"/></svg>` },
+        { clicks: 100, svg: `<svg width="250" height="300" viewBox="0 0 250 300" class="tree-svg"><path d="M125 300 L110 120 L140 120 Z" fill="#6D4C41"/><circle cx="70" cy="150" r="60" fill="#689F38"/><circle cx="180" cy="140" r="65" fill="#4CAF50"/><circle cx="125" cy="80" r="80" fill="#388E3C"/><circle cx="125" cy="120" r="50" fill="#2E7D32" opacity="0.3"/></svg>` },
+        { clicks: 160, svg: `<svg width="350" height="400" viewBox="0 0 350 400" class="tree-svg"><path d="M175 400 L145 180 L205 180 Z" fill="#5D4037"/><path d="M175 280 Q100 230 80 200" stroke="#5D4037" stroke-width="20" stroke-linecap="round"/><path d="M175 240 Q250 180 270 150" stroke="#5D4037" stroke-width="18" stroke-linecap="round"/><circle cx="80" cy="200" r="80" fill="#4CAF50"/><circle cx="270" cy="150" r="85" fill="#388E3C"/><circle cx="110" cy="110" r="95" fill="#2E7D32"/><circle cx="230" cy="90" r="90" fill="#4CAF50"/><circle cx="175" cy="60" r="110" fill="#1B5E20"/></svg>` },
+        { clicks: 250, svg: `<svg width="350" height="400" viewBox="0 0 350 400" class="tree-svg"><path d="M175 400 L145 180 L205 180 Z" fill="#5D4037"/><path d="M175 280 Q100 230 80 200" stroke="#5D4037" stroke-width="20" stroke-linecap="round"/><path d="M175 240 Q250 180 270 150" stroke="#5D4037" stroke-width="18" stroke-linecap="round"/><circle cx="80" cy="200" r="80" fill="#4CAF50"/><circle cx="270" cy="150" r="85" fill="#388E3C"/><circle cx="110" cy="110" r="95" fill="#2E7D32"/><circle cx="230" cy="90" r="90" fill="#4CAF50"/><circle cx="175" cy="60" r="110" fill="#1B5E20"/><circle cx="90" cy="180" r="12" fill="#F44336"/><circle cx="60" cy="210" r="10" fill="#E53935"/><circle cx="260" cy="120" r="12" fill="#F44336"/><circle cx="290" cy="160" r="11" fill="#E53935"/><circle cx="130" cy="90" r="13" fill="#F44336"/><circle cx="80" cy="110" r="10" fill="#E53935"/><circle cx="210" cy="70" r="12" fill="#F44336"/><circle cx="250" cy="80" r="10" fill="#E53935"/><circle cx="180" cy="40" r="13" fill="#F44336"/><circle cx="150" cy="140" r="12" fill="#F44336"/></svg>` },
+        { clicks: 400, svg: `<svg width="480" height="550" viewBox="0 0 480 550" class="tree-svg drop-shadow-[0_0_30px_rgba(100,221,23,0.7)]"><path d="M240 550 L170 250 L310 250 Z" fill="#3E2723"/><path d="M240 550 Q170 450 130 500" stroke="#3E2723" stroke-width="25" fill="none" stroke-linecap="round"/><path d="M240 550 Q310 450 350 500" stroke="#3E2723" stroke-width="25" fill="none" stroke-linecap="round"/><path d="M240 320 Q120 250 60 160" stroke="#4E342E" stroke-width="35" fill="none" stroke-linecap="round"/><path d="M240 320 Q360 250 420 160" stroke="#4E342E" stroke-width="35" fill="none" stroke-linecap="round"/><path d="M240 320 L240 100" stroke="#4E342E" stroke-width="40" fill="none" stroke-linecap="round"/><circle cx="240" cy="180" r="160" fill="#1B5E20"/><circle cx="110" cy="200" r="120" fill="#2E7D32"/><circle cx="370" cy="200" r="120" fill="#2E7D32"/><circle cx="70" cy="130" r="100" fill="#388E3C"/><circle cx="410" cy="130" r="100" fill="#388E3C"/><circle cx="170" cy="90" r="110" fill="#4CAF50"/><circle cx="310" cy="90" r="110" fill="#4CAF50"/><circle cx="240" cy="50" r="100" fill="#689F38"/><path d="M120 200 Q120 300 130 350" stroke="#689F38" stroke-width="4" fill="none" stroke-dasharray="10 5"/><path d="M350 180 Q350 320 340 380" stroke="#689F38" stroke-width="4" fill="none" stroke-dasharray="10 5"/><circle cx="140" cy="160" r="10" fill="#FFF59D" style="animation: sunPulse 2s infinite alternate;"/><circle cx="340" cy="130" r="8" fill="#FFF59D" style="animation: sunPulse 3s infinite alternate;"/><circle cx="240" cy="100" r="12" fill="#FFF59D" style="animation: sunPulse 1.5s infinite alternate;"/><circle cx="90" cy="110" r="7" fill="#FFF59D" style="animation: sunPulse 2.5s infinite alternate;"/><circle cx="390" cy="170" r="9" fill="#FFF59D" style="animation: sunPulse 2.2s infinite alternate;"/><circle cx="240" cy="250" r="15" fill="#FFF59D" style="animation: sunPulse 1.8s infinite alternate; opacity: 0.6;"/></svg>` }
+      ]
+    },
+    chicken: {
+      theme: { text: 'text-amber-700', bg: 'bg-amber-500', nameText: 'text-amber-600', fill: 'from-amber-400 via-orange-500 to-red-500' },
+      stages: [
+        { clicks: 0, svg: `<svg width="50" height="40" viewBox="0 0 50 40" class="tree-svg"><ellipse cx="25" cy="25" rx="14" ry="18" fill="#FFF8E1" stroke="#FFCC80" stroke-width="2"/></svg>` },
+        { clicks: 10, svg: `<svg width="50" height="40" viewBox="0 0 50 40" class="tree-svg"><ellipse cx="25" cy="25" rx="14" ry="18" fill="#FFF8E1" stroke="#FFCC80" stroke-width="2"/><path d="M15 20 L22 25 L20 30 L28 32" stroke="#FFCC80" stroke-width="1.5" fill="none"/></svg>` },
+        { clicks: 30, svg: `<svg width="60" height="50" viewBox="0 0 60 50" class="tree-svg"><path d="M15 35 Q25 15 45 35 Z" fill="#FFF8E1"/><circle cx="30" cy="25" r="12" fill="#FFEE58"/><circle cx="26" cy="22" r="2" fill="#000"/><circle cx="34" cy="22" r="2" fill="#000"/><path d="M28 26 L32 26 L30 29 Z" fill="#FF9800"/><path d="M10 35 Q30 45 50 35 Q30 50 10 35 Z" fill="#FFF8E1"/></svg>` },
+        { clicks: 60, svg: `<svg width="80" height="70" viewBox="0 0 80 70" class="tree-svg"><path d="M35 60 L30 70 M45 60 L50 70" stroke="#FF9800" stroke-width="2"/><circle cx="40" cy="45" r="18" fill="#FFEE58"/><circle cx="40" cy="25" r="14" fill="#FFEE58"/><circle cx="35" cy="22" r="2" fill="#000"/><circle cx="45" cy="22" r="2" fill="#000"/><path d="M38 26 L42 26 L40 30 Z" fill="#FF9800"/><path d="M22 45 Q15 40 22 35 Z" fill="#FBC02D"/><path d="M58 45 Q65 40 58 35 Z" fill="#FBC02D"/></svg>` },
+        { clicks: 100, svg: `<svg width="120" height="120" viewBox="0 0 120 120" class="tree-svg"><path d="M50 110 L45 120 M70 110 L75 120" stroke="#FF9800" stroke-width="3"/><ellipse cx="60" cy="80" rx="30" ry="25" fill="#FAFAFA"/><circle cx="85" cy="50" r="18" fill="#FAFAFA"/><circle cx="80" cy="45" r="3" fill="#000"/><path d="M100 50 L110 55 L100 60 Z" fill="#FF9800"/><path d="M85 32 Q90 20 95 32 Z" fill="#F44336"/><path d="M30 80 Q10 70 20 60 Q30 65 40 70 Z" fill="#EEEEEE"/><path d="M60 90 Q40 100 20 95 Z" fill="#FAFAFA"/></svg>` },
+        { clicks: 160, svg: `<svg width="180" height="180" viewBox="0 0 180 180" class="tree-svg"><path d="M70 160 L60 180 M110 160 L120 180" stroke="#FF9800" stroke-width="4"/><ellipse cx="90" cy="110" rx="45" ry="35" fill="#FFFFFF"/><circle cx="130" cy="60" r="25" fill="#FFFFFF"/><circle cx="125" cy="50" r="4" fill="#000"/><path d="M150 60 L170 65 L150 75 Z" fill="#FF9800"/><path d="M125 35 Q135 15 145 35 Q140 20 120 30 Z" fill="#F44336"/><path d="M135 80 Q145 95 130 90 Z" fill="#F44336"/><path d="M45 110 Q10 90 20 70 Q30 80 50 90 Z" fill="#E0E0E0"/><path d="M90 140 Q40 150 10 130 Q30 160 80 145 Z" fill="#2E7D32"/><path d="M90 140 Q50 160 20 140 Q40 170 80 150 Z" fill="#1565C0"/></svg>` },
+        { clicks: 250, svg: `<svg width="250" height="250" viewBox="0 0 250 250" class="tree-svg drop-shadow-[0_0_15px_rgba(255,215,0,0.6)]"><path d="M100 220 L80 250 M150 220 L170 250" stroke="#FFB300" stroke-width="6"/><ellipse cx="125" cy="150" rx="60" ry="50" fill="#FFD54F"/><circle cx="180" cy="80" r="35" fill="#FFD54F"/><circle cx="170" cy="70" r="6" fill="#000"/><path d="M210 80 L240 85 L210 100 Z" fill="#FF8F00"/><path d="M175 45 Q190 15 205 45 Q195 20 165 40 Z" fill="#D84315"/><path d="M190 110 Q205 130 185 125 Z" fill="#D84315"/><path d="M65 150 Q20 120 30 90 Q45 105 75 120 Z" fill="#FFCA28"/><path d="M125 190 Q50 210 10 170 Q40 230 110 200 Z" fill="#FF8F00"/><path d="M125 190 Q70 230 20 190 Q50 240 110 210 Z" fill="#FF6F00"/></svg>` },
+        { clicks: 400, svg: `<svg width="480" height="550" viewBox="0 0 480 550" class="tree-svg drop-shadow-[0_0_30px_rgba(255,87,34,0.8)]"><path d="M200 500 L160 550 M280 500 L320 550" stroke="#FF5722" stroke-width="8"/><ellipse cx="240" cy="350" rx="80" ry="120" fill="#D84315"/><circle cx="240" cy="180" r="45" fill="#FF5722"/><circle cx="225" cy="165" r="8" fill="#FFF"/><circle cx="225" cy="165" r="3" fill="#000"/><path d="M260 180 L320 190 L260 210 Z" fill="#FFC107"/><path d="M240 135 Q280 50 300 135 Q270 70 210 120 Z" fill="#FFEB3B"/><path d="M160 350 Q40 250 20 150 Q100 220 180 300 Z" fill="#FF9800"/><path d="M320 350 Q440 250 460 150 Q380 220 300 300 Z" fill="#FF9800"/><path d="M240 450 Q100 550 50 480 Q150 580 220 480 Z" fill="#F44336"/><path d="M240 450 Q380 550 430 480 Q330 580 260 480 Z" fill="#F44336"/><circle cx="100" cy="200" r="10" fill="#FFEB3B" style="animation: sunPulse 1.5s infinite alternate;"/><circle cx="380" cy="200" r="12" fill="#FFEB3B" style="animation: sunPulse 2s infinite alternate;"/><circle cx="240" cy="100" r="15" fill="#FFC107" style="animation: sunPulse 1.2s infinite alternate;"/></svg>` }
+      ]
+    },
+    house: {
+      theme: { text: 'text-blue-700', bg: 'bg-blue-500', nameText: 'text-blue-600', fill: 'from-cyan-400 via-blue-500 to-indigo-600' },
+      stages: [
+        { clicks: 0, svg: `<svg width="60" height="40" viewBox="0 0 60 40" class="tree-svg"><path d="M20 35 L40 35 L30 20 Z" fill="#FF5722"/><path d="M25 35 L35 35 L30 25 Z" fill="#FFEB3B"/><rect x="15" y="35" width="30" height="5" fill="#5D4037" rx="2"/></svg>` },
+        { clicks: 10, svg: `<svg width="90" height="70" viewBox="0 0 90 70" class="tree-svg"><path d="M10 70 L80 70 L80 40 L10 40 Z" fill="#D7CCC8"/><path d="M5 40 Q45 10 85 40 Z" fill="#FFCC80"/><rect x="40" y="50" width="15" height="20" fill="#5D4037"/></svg>` },
+        { clicks: 30, svg: `<svg width="140" height="110" viewBox="0 0 140 110" class="tree-svg"><rect x="20" y="50" width="100" height="60" fill="#8D6E63"/><path d="M10 50 L70 10 L130 50 Z" fill="#5D4037"/><rect x="60" y="70" width="20" height="40" fill="#3E2723"/><rect x="30" y="65" width="20" height="20" fill="#81D4FA"/><rect x="90" y="65" width="20" height="20" fill="#81D4FA"/><path d="M20 60 L120 60 M20 70 L120 70 M20 80 L120 80 M20 90 L120 90 M20 100 L120 100" stroke="#795548" stroke-width="2"/></svg>` },
+        { clicks: 60, svg: `<svg width="180" height="150" viewBox="0 0 180 150" class="tree-svg"><rect x="30" y="60" width="120" height="90" fill="#E57373"/><path d="M20 60 L90 20 L160 60 Z" fill="#424242"/><rect x="75" y="100" width="30" height="50" fill="#5D4037"/><rect x="45" y="80" width="20" height="30" fill="#81D4FA"/><rect x="115" y="80" width="20" height="30" fill="#81D4FA"/><path d="M120 20 L130 20 L130 50 L120 50 Z" fill="#BDBDBD"/></svg>` },
+        { clicks: 100, svg: `<svg width="260" height="200" viewBox="0 0 260 200" class="tree-svg"><rect x="40" y="100" width="180" height="100" fill="#F5F5F5"/><rect x="40" y="40" width="100" height="60" fill="#E0E0E0"/><path d="M30 40 L150 40 L150 30 L30 30 Z" fill="#424242"/><path d="M30 100 L230 100 L230 90 L30 90 Z" fill="#424242"/><rect x="180" y="100" width="40" height="100" fill="#90CAF9" opacity="0.6"/><rect x="60" y="120" width="50" height="80" fill="#81D4FA"/><rect x="130" y="140" width="30" height="60" fill="#795548"/><rect x="60" y="55" width="60" height="35" fill="#81D4FA"/></svg>` },
+        { clicks: 160, svg: `<svg width="220" height="320" viewBox="0 0 220 320" class="tree-svg"><rect x="40" y="20" width="140" height="300" fill="#CFD8DC"/><rect x="100" y="280" width="40" height="40" fill="#546E7A"/><rect x="60" y="40" width="30" height="30" fill="#90CAF9"/><rect x="130" y="40" width="30" height="30" fill="#90CAF9"/><rect x="60" y="90" width="30" height="30" fill="#90CAF9"/><rect x="130" y="90" width="30" height="30" fill="#90CAF9"/><rect x="60" y="140" width="30" height="30" fill="#90CAF9"/><rect x="130" y="140" width="30" height="30" fill="#90CAF9"/><rect x="60" y="190" width="30" height="30" fill="#90CAF9"/><rect x="130" y="190" width="30" height="30" fill="#90CAF9"/><rect x="60" y="240" width="30" height="30" fill="#90CAF9"/><rect x="130" y="240" width="30" height="30" fill="#90CAF9"/></svg>` },
+        { clicks: 250, svg: `<svg width="260" height="450" viewBox="0 0 260 450" class="tree-svg drop-shadow-[0_0_10px_rgba(144,202,249,0.5)]"><rect x="60" y="50" width="140" height="400" fill="#90A4AE"/><path d="M60 50 L130 10 L200 50 Z" fill="#78909C"/><pattern id="windows" x="0" y="0" width="20" height="30" patternUnits="userSpaceOnUse"><rect x="5" y="5" width="10" height="20" fill="#E3F2FD"/></pattern><rect x="70" y="60" width="120" height="390" fill="url(#windows)"/></svg>` },
+        { clicks: 400, svg: `<svg width="480" height="550" viewBox="0 0 480 550" class="tree-svg drop-shadow-[0_0_25px_rgba(0,229,255,0.7)]"><path d="M140 450 Q240 550 340 450 Z" fill="#263238"/><ellipse cx="240" cy="450" rx="140" ry="30" fill="#37474F"/><rect x="160" y="250" width="40" height="200" fill="#00E5FF" opacity="0.8"/><rect x="220" y="150" width="60" height="300" fill="#18FFFF" opacity="0.9"/><rect x="300" y="300" width="30" height="150" fill="#00B8D4" opacity="0.8"/><path d="M220 150 L250 80 L280 150 Z" fill="#84FFFF"/><circle cx="250" cy="50" r="15" fill="#E0F7FA" style="animation: sunPulse 1s infinite alternate;"/><path d="M100 450 Q240 400 380 450" stroke="#00E5FF" stroke-width="3" fill="none"/><path d="M120 480 Q240 430 360 480" stroke="#18FFFF" stroke-width="2" fill="none" stroke-dasharray="5 5"/><circle cx="160" cy="350" r="8" fill="#FFF" style="animation: sunPulse 2s infinite alternate;"/><circle cx="340" cy="250" r="6" fill="#FFF" style="animation: sunPulse 1.5s infinite alternate;"/></svg>` }
+      ]
+    }
+  };
+
+  // 状态系统：各路径的数据互相独立
+  let currentPath = 'tree';
+  let pathState = {
+    tree: { clicks: 0, stageIndex: 0 },
+    chicken: { clicks: 0, stageIndex: 0 },
+    house: { clicks: 0, stageIndex: 0 }
+  };
+  let currentLang = 'en';
+
+  // DOM 元素引用
+  const gameArea = document.getElementById('game-area');
+  const treeContainer = document.getElementById('tree-container');
+  const clickCountEl = document.getElementById('click-count');
+  const entityNameEl = document.getElementById('entity-name');
+  const progressFill = document.getElementById('progress-fill');
+  const nextGoalEl = document.getElementById('next-goal');
+  const langSelect = document.getElementById('lang-select');
+  const pathSelect = document.getElementById('path-select');
+
+  // 多语言字典
+  const i18n = {
+    en: {
+      titles: { tree: "🌲 Tree Planting", chicken: "🐔 Chicken Raising", house: "🏠 City Building" },
+      tabs: { tree: "Tree", chicken: "Chicken", house: "Building" },
+      currentStage: "Current Stage: ",
+      clicksUnit: "clicks",
+      instruction: "👆 Click (or tap) anywhere on the screen like crazy!",
+      goalReached: "🎉 Congratulations! Maximum level reached!",
+      goalRemaining: (clicks, nextStage) => `${clicks} more clicks to evolve into 【${nextStage}】`,
+      stages: {
+        tree: ["A Tiny Seed", "Sprouting", "Sturdy Seedling", "Lush Sapling", "Thriving Tree", "Towering Tree", "Fruitful Tree", "Ancient World Tree"],
+        chicken: ["Egg", "Cracking Egg", "Hatching Chick", "Baby Chick", "Young Chicken", "Adult Rooster", "Golden Chicken", "Legendary Phoenix"],
+        house: ["Campfire", "Straw Hut", "Wooden Cabin", "Brick House", "Modern Villa", "Apartment Building", "Skyscraper", "Futuristic City"]
+      }
+    },
+    zh: {
+      titles: { tree: "🌲 种树模拟器", chicken: "🐔 养鸡模拟器", house: "🏠 建房模拟器" },
+      tabs: { tree: "树木", chicken: "家禽", house: "建筑" },
+      currentStage: "当前阶段: ",
+      clicksUnit: "次",
+      instruction: "👆 在屏幕任意空白处疯狂点击（或触摸）吧！",
+      goalReached: "🎉 恭喜！已达到最高进化形态！",
+      goalRemaining: (clicks, nextStage) => `距离进化为【${nextStage}】还需 ${clicks} 次点击`,
+      stages: {
+        tree: ["一颗小种子", "生根发芽", "茁壮小苗", "青葱树苗", "茂盛小树", "参天大树", "硕果累累的大树", "远古世界之树"],
+        chicken: ["鸡蛋", "破壳", "探头小鸡", "毛茸茸小鸡", "青年鸡", "成年大公鸡", "黄金斗鸡", "远古不死鸟"],
+        house: ["平地篝火", "简易破草屋", "温馨木屋", "坚固砖房", "现代大别墅", "小高层公寓", "摩天大楼", "赛博浮空城"]
+      }
+    }
+  };
+
+  // 初始化
+  function init() {
+    updateLanguageUI();
+    updateVisuals(true);
+  }
+
+  // 监听成长路径切换
+  pathSelect.addEventListener('change', (e) => {
+    const selectedPath = e.target.value;
+    if (selectedPath !== currentPath) {
+      currentPath = selectedPath;
+      updateLanguageUI();
+      updateVisuals(true); // true 代表静默切换，不播放粒子爆炸特效
+    }
+  });
+
+  // 更新静态文本语言
+  function updateLanguageUI() {
+    const langData = i18n[currentLang];
+
+    document.getElementById('ui-title').innerText = langData.titles[currentPath];
+    document.title = langData.titles[currentPath];
+
+    // 更新下拉框选项文本
+    pathSelect.options[0].text = `🌲 ${langData.tabs.tree}`;
+    pathSelect.options[1].text = `🐔 ${langData.tabs.chicken}`;
+    pathSelect.options[2].text = `🏠 ${langData.tabs.house}`;
+    pathSelect.value = currentPath;
+
+    document.getElementById('ui-current-stage').innerText = langData.currentStage;
+    document.getElementById('ui-clicks-unit').innerText = langData.clicksUnit;
+    document.getElementById('ui-instruction').innerText = langData.instruction;
+  }
+
+  // 监听语言切换
+  langSelect.addEventListener('change', (e) => {
+    currentLang = e.target.value;
+    updateLanguageUI();
+    updateVisuals(true);
+  });
+
+  // 创建升级粒子特效
+  function spawnUpgradeParticles() {
+    const rect = treeContainer.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    for(let i = 0; i < 40; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle bg-yellow-400';
+
+      const size = Math.random() * 8 + 4;
+      particle.style.width = `${size}px`;
+      particle.style.height = `${size}px`;
+
+      particle.style.left = `${centerX}px`;
+      particle.style.top = `${centerY - 50}px`;
+
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * 150 + 50;
+      particle.style.setProperty('--vx', `${Math.cos(angle) * distance}px`);
+      particle.style.setProperty('--vy', `${Math.sin(angle) * distance}px`);
+
+      const colors = ['#fbbf24', '#4ade80', '#60a5fa', '#f472b6', '#a78bfa', '#fb923c'];
+      particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+      document.body.appendChild(particle);
+      setTimeout(() => particle.remove(), 1000);
+    }
+  }
+
+  // 更新视觉状态 (核心渲染)
+  function updateVisuals(isInit = false) {
+    let state = pathState[currentPath];
+    let stagesData = gameData[currentPath].stages;
+    let newStageIndex = state.stageIndex;
+
+    // UI 主题颜色切换
+    const theme = gameData[currentPath].theme;
+    document.getElementById('ui-title').className = `text-3xl font-black mb-2 drop-shadow-sm transition-colors ${theme.text}`;
+    entityNameEl.className = `font-bold inline-block transition-colors ${theme.nameText}`;
+    progressFill.className = `h-full rounded-full transition-all duration-300 ease-out bg-gradient-to-r ${theme.fill}`;
+
+    // 计算当前属于哪个阶段
+    for (let i = stagesData.length - 1; i >= 0; i--) {
+      if (state.clicks >= stagesData[i].clicks) {
+        newStageIndex = i;
+        break;
+      }
+    }
+
+    // 阶段提升或切路径时更新 SVG
+    if (newStageIndex !== state.stageIndex || isInit) {
+      state.stageIndex = newStageIndex;
+      treeContainer.innerHTML = stagesData[state.stageIndex].svg;
+      entityNameEl.innerText = i18n[currentLang].stages[currentPath][state.stageIndex];
+
+      if(!isInit) {
+        entityNameEl.classList.remove('pop-text');
+        void entityNameEl.offsetWidth; // 触发重绘
+        entityNameEl.classList.add('pop-text');
+        spawnUpgradeParticles();
+      }
+    } else {
+      // 如果只是普通点击，确保名字是对的
+      entityNameEl.innerText = i18n[currentLang].stages[currentPath][state.stageIndex];
+    }
+
+    // 更新计数器和进度条
+    clickCountEl.innerText = state.clicks;
+
+    let currentLevelClicks = stagesData[state.stageIndex].clicks;
+    let nextLevelClicks = stagesData[state.stageIndex + 1] ? stagesData[state.stageIndex + 1].clicks : currentLevelClicks;
+
+    if (state.stageIndex === stagesData.length - 1) {
+      progressFill.style.width = '100%';
+      nextGoalEl.innerText = i18n[currentLang].goalReached;
+      nextGoalEl.className = `text-sm font-bold ${theme.text}`;
+    } else {
+      let progress = ((state.clicks - currentLevelClicks) / (nextLevelClicks - currentLevelClicks)) * 100;
+      progressFill.style.width = `${progress}%`;
+      nextGoalEl.className = 'text-sm text-gray-500 font-medium';
+
+      let nextStageName = i18n[currentLang].stages[currentPath][state.stageIndex + 1];
+      let clicksLeft = nextLevelClicks - state.clicks;
+      nextGoalEl.innerText = i18n[currentLang].goalRemaining(clicksLeft, nextStageName);
+    }
+  }
+
+  // 显示浮动的 +1 文字
+  function showFloatingText(x, y) {
+    const text = document.createElement('div');
+    text.className = 'floating-number';
+    text.innerText = '+1';
+    text.style.left = `${x - 15}px`;
+    text.style.top = `${y - 30}px`;
+    text.style.setProperty('--drift', `${(Math.random() - 0.5) * 60}px`);
+
+    gameArea.appendChild(text);
+    setTimeout(() => text.remove(), 800);
+  }
+
+  // 处理点击
+  function handleAction(x, y) {
+    pathState[currentPath].clicks++;
+
+    clickCountEl.style.transform = 'scale(1.2)';
+    setTimeout(() => clickCountEl.style.transform = 'scale(1)', 100);
+
+    showFloatingText(x, y);
+    updateVisuals();
+  }
+
+  // 绑定事件
+  gameArea.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    // 只排除语言选择器和成长路径选择器，其他区域点击都计数
+    if (e.target.closest('#lang-select') || e.target.closest('#path-select')) return;
+    handleAction(e.clientX, e.clientY);
+  });
+
+  gameArea.addEventListener('touchstart', (e) => {
+    // 只排除语言选择器和成长路径选择器
+    if (e.target.closest('#lang-select') || e.target.closest('#path-select')) return;
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(touch => {
+      handleAction(touch.clientX, touch.clientY);
+    });
+  }, { passive: false });
+
+  document.addEventListener('contextmenu', event => event.preventDefault());
+
+  // 反制措施
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12' || e.keyCode === 123) { e.preventDefault(); return false; }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i')) { e.preventDefault(); return false; }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'J' || e.key === 'j')) { e.preventDefault(); return false; }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) { e.preventDefault(); return false; }
+  });
+
+  setInterval(function() {
+    const before = new Date().getTime();
+    (function(){}).constructor('debugger')();
+    const after = new Date().getTime();
+  }, 2000);
+
+  init();
+</script>
+</body>
+</html>
