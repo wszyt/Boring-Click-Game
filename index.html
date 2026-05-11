@@ -156,6 +156,17 @@
     .tree-svg:hover {
       filter: brightness(1.1) drop-shadow(0 12px 24px rgba(0,0,0,0.4));
     }
+    .tree-svg * {
+      vector-effect: non-scaling-stroke;
+    }
+    .stage-detail {
+      pointer-events: none;
+    }
+    .stage-detail .soft-line {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
     @keyframes growBounce {
       0% { transform: scale(0.2); opacity: 0; filter: brightness(2); }
       40% { transform: scale(1.15); filter: brightness(1.3); }
@@ -482,6 +493,53 @@
     if (stageIndex >= 6) {
       svg.classList.add('legendary-stage');
     }
+
+    const detail = stageDetails[currentPath]?.[stageIndex];
+    if (detail) {
+      svg.insertAdjacentHTML('beforeend', `<g class="stage-detail">${detail}</g>`);
+    }
+  }
+
+  const stageDetails = {
+    tree: [
+      `<ellipse cx="25" cy="16" rx="8" ry="4" fill="#8d6e63" opacity="0.55"/><path class="soft-line" d="M16 24 C22 28 30 28 36 24" stroke="#3e2723" stroke-width="1.2" opacity="0.45"/><circle cx="31" cy="17" r="1.5" fill="#a5d6a7"/>`,
+      `<path class="soft-line" d="M36 50 C44 40 50 34 58 31" stroke="#7cb342" stroke-width="3"/><path class="soft-line" d="M33 45 C25 37 18 34 12 32" stroke="#9ccc65" stroke-width="2.5"/><circle cx="43" cy="35" r="5" fill="#c5e1a5"/><circle cx="21" cy="33" r="4" fill="#dcedc8"/>`,
+      `<path class="soft-line" d="M50 48 C39 53 31 59 24 70" stroke="#33691e" stroke-width="2" opacity="0.65"/><path class="soft-line" d="M52 43 C61 48 68 56 75 67" stroke="#33691e" stroke-width="2" opacity="0.6"/><circle cx="50" cy="22" r="5" fill="#dcedc8"/><path class="soft-line" d="M44 91 C36 96 29 98 20 96" stroke="#795548" stroke-width="2" opacity="0.45"/>`,
+      `<path class="soft-line" d="M76 174 C67 150 70 118 75 88" stroke="#a1887f" stroke-width="2.5" opacity="0.5"/><path class="soft-line" d="M25 70 C45 82 58 83 75 70" stroke="#c5e1a5" stroke-width="3" opacity="0.65"/><path class="soft-line" d="M75 44 C91 54 105 55 122 42" stroke="#dcedc8" stroke-width="3" opacity="0.55"/><circle cx="98" cy="32" r="5" fill="#fef3c7" opacity="0.8"/>`,
+      `<path class="soft-line" d="M126 292 C114 245 116 190 126 136" stroke="#a1887f" stroke-width="4" opacity="0.45"/><path class="soft-line" d="M62 150 C92 170 132 164 164 138" stroke="#c8e6c9" stroke-width="4" opacity="0.6"/><path class="soft-line" d="M124 78 C146 108 177 120 214 112" stroke="#a5d6a7" stroke-width="4" opacity="0.55"/><circle cx="84" cy="120" r="7" fill="#fde68a"/><circle cx="182" cy="92" r="6" fill="#fef08a"/>`,
+      `<path class="soft-line" d="M176 392 C154 318 154 248 176 184" stroke="#a1887f" stroke-width="7" opacity="0.45"/><path class="soft-line" d="M70 202 C118 236 170 228 220 188" stroke="#bbf7d0" stroke-width="5" opacity="0.58"/><path class="soft-line" d="M118 112 C172 150 230 142 286 92" stroke="#86efac" stroke-width="5" opacity="0.48"/><circle cx="72" cy="196" r="8" fill="#fef08a"/><circle cx="250" cy="132" r="8" fill="#fde68a"/><circle cx="184" cy="58" r="10" fill="#ecfccb"/>`,
+      `<path class="soft-line" d="M175 388 C150 315 152 246 174 184" stroke="#a1887f" stroke-width="7" opacity="0.42"/><path class="soft-line" d="M64 204 C118 246 174 230 226 186" stroke="#bbf7d0" stroke-width="5" opacity="0.6"/><circle cx="92" cy="182" r="15" fill="#ef4444" opacity="0.9"/><circle cx="262" cy="122" r="15" fill="#f87171" opacity="0.92"/><circle cx="182" cy="42" r="16" fill="#fef08a" opacity="0.75"/><path class="soft-line" d="M126 92 C168 122 214 112 250 78" stroke="#dcfce7" stroke-width="4" opacity="0.55"/>`,
+      `<circle cx="260" cy="178" r="205" fill="none" stroke="#bbf7d0" stroke-width="4" opacity="0.28"/><circle cx="260" cy="178" r="232" fill="none" stroke="#fef08a" stroke-width="2" opacity="0.2"/><path class="soft-line" d="M76 250 C152 328 364 326 444 250" stroke="#ecfccb" stroke-width="4" opacity="0.62"/>`
+    ],
+    chicken: [
+      `<path class="soft-line" d="M16 24 L24 20 L31 26 L38 21" stroke="#fbbf24" stroke-width="1.5" opacity="0.7"/><ellipse cx="25" cy="30" rx="8" ry="3" fill="#ffe0b2" opacity="0.55"/>`,
+      `<path class="soft-line" d="M17 18 L25 24 L21 31 L31 35 L28 39" stroke="#f59e0b" stroke-width="2"/><path class="soft-line" d="M34 18 C39 22 40 28 36 34" stroke="#ffe0b2" stroke-width="2" opacity="0.8"/>`,
+      `<circle cx="22" cy="27" r="3" fill="#fff3c4" opacity="0.9"/><circle cx="38" cy="27" r="3" fill="#fff3c4" opacity="0.9"/><path class="soft-line" d="M19 38 C29 43 39 43 50 37" stroke="#fbbf24" stroke-width="2.5" opacity="0.7"/><path class="soft-line" d="M26 36 L22 43 M35 36 L39 43" stroke="#f59e0b" stroke-width="2"/>`,
+      `<path class="soft-line" d="M25 48 C35 56 48 56 57 48" stroke="#fff3c4" stroke-width="3" opacity="0.9"/><path class="soft-line" d="M22 45 C12 46 8 53 10 60" stroke="#fbbf24" stroke-width="2.5"/><path class="soft-line" d="M58 45 C68 46 72 53 70 60" stroke="#fbbf24" stroke-width="2.5"/><circle cx="31" cy="27" r="2" fill="#fff"/>`,
+      `<path class="soft-line" d="M32 80 C44 96 72 98 91 84" stroke="#e5e7eb" stroke-width="5" opacity="0.75"/><path class="soft-line" d="M78 33 C84 25 92 24 99 31" stroke="#ef4444" stroke-width="3"/><path class="soft-line" d="M44 108 L34 118 M78 108 L88 118" stroke="#fb923c" stroke-width="3"/><circle cx="83" cy="45" r="2" fill="#fff"/>`,
+      `<path class="soft-line" d="M40 112 C58 136 104 140 134 110" stroke="#f8fafc" stroke-width="6" opacity="0.75"/><path class="soft-line" d="M28 88 C48 104 64 108 84 106" stroke="#94a3b8" stroke-width="4" opacity="0.55"/><path class="soft-line" d="M132 36 C144 24 158 25 168 38" stroke="#ef4444" stroke-width="4"/><circle cx="128" cy="50" r="3" fill="#fff"/>`,
+      `<path class="soft-line" d="M54 150 C82 184 152 184 196 140" stroke="#fde68a" stroke-width="8" opacity="0.75"/><path class="soft-line" d="M42 112 C74 138 100 146 134 142" stroke="#f97316" stroke-width="5" opacity="0.65"/><path class="soft-line" d="M176 42 C194 22 218 28 230 52" stroke="#facc15" stroke-width="5"/><circle cx="176" cy="72" r="4" fill="#fff"/><circle cx="100" cy="188" r="6" fill="#fef3c7"/>`,
+      `<circle cx="260" cy="240" r="168" fill="none" stroke="#fed7aa" stroke-width="4" opacity="0.32"/><path class="soft-line" d="M74 160 C136 260 188 302 236 334" stroke="#fef3c7" stroke-width="6" opacity="0.58"/><path class="soft-line" d="M446 160 C384 260 332 302 284 334" stroke="#fef3c7" stroke-width="6" opacity="0.58"/><circle cx="260" cy="38" r="18" fill="#fff7ad" opacity="0.72"/>`
+    ],
+    house: [
+      `<circle cx="30" cy="26" r="15" fill="#fb923c" opacity="0.22"/><path class="soft-line" d="M24 34 C30 28 34 28 40 34" stroke="#fef3c7" stroke-width="2"/><path class="soft-line" d="M18 38 C28 41 38 41 48 38" stroke="#8d6e63" stroke-width="1.5"/>`,
+      `<path class="soft-line" d="M14 44 H76" stroke="#8d6e63" stroke-width="2" opacity="0.45"/><path class="soft-line" d="M20 38 C34 31 52 31 70 38" stroke="#ffe0b2" stroke-width="3" opacity="0.75"/><rect x="48" y="51" width="8" height="10" fill="#ffd54f" opacity="0.75"/>`,
+      `<path class="soft-line" d="M18 58 H122 M18 75 H122 M18 92 H122" stroke="#a1887f" stroke-width="2" opacity="0.58"/><path class="soft-line" d="M26 52 L70 22 L114 52" stroke="#d7ccc8" stroke-width="4" opacity="0.55"/><rect x="34" y="68" width="12" height="12" fill="#e0f7fa" opacity="0.8"/><rect x="94" y="68" width="12" height="12" fill="#e0f7fa" opacity="0.8"/>`,
+      `<path class="soft-line" d="M24 64 L90 28 L156 64" stroke="#cbd5e1" stroke-width="4" opacity="0.55"/><path class="soft-line" d="M42 92 H64 M116 92 H138" stroke="#e0f2fe" stroke-width="4" opacity="0.75"/><path class="soft-line" d="M124 16 C138 4 152 10 154 28" stroke="#e5e7eb" stroke-width="3" opacity="0.85"/><circle cx="90" cy="124" r="6" fill="#fef3c7" opacity="0.7"/>`,
+      `<path class="soft-line" d="M44 100 H224" stroke="#93c5fd" stroke-width="4" opacity="0.45"/><path class="soft-line" d="M54 50 H130" stroke="#ffffff" stroke-width="3" opacity="0.55"/><rect x="184" y="116" width="28" height="74" fill="#e0f2fe" opacity="0.35"/><circle cx="80" cy="72" r="5" fill="#fff" opacity="0.8"/>`,
+      `<path class="soft-line" d="M50 78 H170 M50 128 H170 M50 178 H170 M50 228 H170" stroke="#e0f2fe" stroke-width="3" opacity="0.42"/><path class="soft-line" d="M40 24 H180" stroke="#f8fafc" stroke-width="4" opacity="0.4"/><circle cx="78" cy="54" r="4" fill="#fff"/><circle cx="142" cy="204" r="4" fill="#fff"/>`,
+      `<path class="soft-line" d="M62 50 L130 12 L198 50" stroke="#cbd5e1" stroke-width="4" opacity="0.65"/><path class="soft-line" d="M78 72 H184 M78 132 H184 M78 192 H184 M78 252 H184 M78 312 H184" stroke="#cffafe" stroke-width="3" opacity="0.55"/><circle cx="130" cy="30" r="7" fill="#ecfeff"/><path class="soft-line" d="M42 420 C86 394 176 394 220 420" stroke="#38bdf8" stroke-width="4" opacity="0.45"/>`,
+      `<circle cx="268" cy="36" r="36" fill="none" stroke="#cffafe" stroke-width="3" opacity="0.3"/><path class="soft-line" d="M62 428 C148 374 372 374 458 428" stroke="#a5f3fc" stroke-width="4" opacity="0.55"/><path class="soft-line" d="M100 514 C192 456 328 456 420 514" stroke="#67e8f9" stroke-width="4" opacity="0.35"/>`
+    ]
+  };
+
+  function releasePanelFocus() {
+    requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active === pathSelect || active === langSelect) {
+        active.blur();
+      }
+    });
   }
 
   // 监听成长路径切换
@@ -491,6 +549,7 @@
       currentPath = selectedPath;
       updateLanguageUI();
       updateVisuals(true); // true 代表静默切换，不播放粒子爆炸特效
+      releasePanelFocus();
     }
   });
 
@@ -517,6 +576,7 @@
     currentLang = e.target.value;
     updateLanguageUI();
     updateVisuals(true);
+    releasePanelFocus();
   });
 
   // 创建升级粒子特效
