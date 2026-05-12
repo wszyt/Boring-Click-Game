@@ -194,9 +194,14 @@
       transition: opacity 0.25s ease, box-shadow 0.3s ease, transform 0.3s ease;
     }
 
-    #ui-panel:hover,
-    #ui-panel:focus-within {
+    #ui-panel.is-active {
       opacity: 0.98;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      #ui-panel:hover {
+        opacity: 0.98;
+      }
     }
 
     #path-select,
@@ -239,8 +244,7 @@
         opacity: 0.36;
       }
 
-      #ui-panel:hover,
-      #ui-panel:focus-within {
+      #ui-panel.is-active {
         opacity: 0.96;
       }
 
@@ -440,6 +444,7 @@
   const nextGoalEl = document.getElementById('next-goal');
   const langSelect = document.getElementById('lang-select');
   const pathSelect = document.getElementById('path-select');
+  const uiPanel = document.getElementById('ui-panel');
 
   // 多语言字典
   const i18n = {
@@ -539,8 +544,21 @@
       if (active === pathSelect || active === langSelect) {
         active.blur();
       }
+      uiPanel.classList.remove('is-active');
     });
   }
+
+  uiPanel.addEventListener('focusin', () => {
+    uiPanel.classList.add('is-active');
+  });
+
+  uiPanel.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (!uiPanel.contains(document.activeElement)) {
+        uiPanel.classList.remove('is-active');
+      }
+    }, 0);
+  });
 
   // 监听成长路径切换
   pathSelect.addEventListener('change', (e) => {
