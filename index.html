@@ -2,748 +2,1251 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Boring Click Game</title>
-  <!-- 引入 Tailwind CSS 用于快速页面布局和基础样式 -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>种树点击模拟器</title>
   <style>
-    /* 全局样式禁止文本选中，优化快速点击体验 */
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      user-select: none;
-      -webkit-user-select: none;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(180deg, #1e3a5f 0%, #2d5a87 30%, #3d7cb3 50%, #8b6f47 50%, #6b5337 70%, #4a3728 100%);
+    :root {
+      --surface: rgba(255, 255, 255, 0.88);
+      --surface-strong: rgba(255, 255, 255, 0.96);
+      --ink: #172033;
+      --muted: #667085;
+      --line: rgba(23, 32, 51, 0.12);
+      --accent: #2f8f5b;
+      --accent-2: #8ccf6f;
+      --accent-3: #f2c85b;
+      --shadow: 0 24px 70px rgba(23, 32, 51, 0.18);
+      --glow: rgba(47, 143, 91, 0.32);
+      --sky-top: #8fd3ff;
+      --sky-mid: #d9f4ff;
+      --ground-top: #86c96f;
+      --ground-deep: #346344;
+      color-scheme: light;
     }
 
-    /* 动态背景天空 - 增强渐变效果 */
-    #sky {
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      overflow: hidden;
+      color: var(--ink);
+      background: #d9f4ff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+    }
+
+    .game-shell {
+      position: relative;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 620px;
+      overflow: hidden;
+      cursor: pointer;
+      background:
+        radial-gradient(circle at 78% 16%, rgba(255, 246, 179, 0.95) 0 48px, rgba(255, 246, 179, 0.36) 49px 116px, transparent 117px),
+        linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 54%, var(--ground-top) 54.3%, var(--ground-deep) 100%);
+    }
+
+    .game-shell::before,
+    .game-shell::after {
+      content: "";
       position: absolute;
-      top: 0; left: 0; width: 100%; height: 60%;
-      background: linear-gradient(180deg, #0ea5e9 0%, #38bdf8 30%, #7dd3fc 60%, #bae6fd 100%);
+      inset: auto -8vw 0;
+      pointer-events: none;
+    }
+
+    .game-shell::before {
+      height: 44%;
+      background:
+        radial-gradient(ellipse at 12% 8%, rgba(255, 255, 255, 0.68) 0 18%, transparent 19%),
+        radial-gradient(ellipse at 34% 18%, rgba(255, 255, 255, 0.5) 0 14%, transparent 15%),
+        radial-gradient(ellipse at 84% 0%, rgba(255, 255, 255, 0.54) 0 18%, transparent 19%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 40%);
+      top: 0;
+      bottom: auto;
       z-index: 1;
     }
 
-    /* 动态背景地面 - 更丰富的层次 */
-    #ground {
-      position: absolute;
-      bottom: 0; left: 0; width: 100%; height: 40%;
-      background: linear-gradient(180deg, #4ade80 0%, #22c55e 10%, #16a34a 20%, #854d0e 25%, #713f12 40%, #522a0f 60%, #3d1f0b 100%);
-      border-top: 8px solid #86efac;
-      box-shadow: 0 -10px 40px rgba(74, 222, 128, 0.3);
+    .game-shell::after {
+      height: 38%;
+      background:
+        radial-gradient(ellipse at 18% 10%, rgba(44, 122, 72, 0.64) 0 23%, transparent 24%),
+        radial-gradient(ellipse at 70% 4%, rgba(44, 122, 72, 0.52) 0 26%, transparent 27%),
+        radial-gradient(ellipse at 45% 94%, rgba(35, 68, 50, 0.58) 0 42%, transparent 43%),
+        linear-gradient(180deg, rgba(88, 137, 82, 0.1), rgba(30, 62, 46, 0.72));
       z-index: 2;
     }
 
-    /* 太阳呼吸灯动画 - 更柔和的光晕 */
-    .sun {
+    .cloud {
       position: absolute;
-      top: 40px; right: 60px;
-      width: 100px; height: 100px;
-      background: radial-gradient(circle, #fef3c7 0%, #fde047 40%, #fbbf24 100%);
+      z-index: 3;
+      width: var(--cloud-size);
+      height: calc(var(--cloud-size) * 0.36);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      filter: blur(0.2px);
+      opacity: var(--cloud-opacity);
+      transform: translateX(-20vw);
+      animation: cloudDrift var(--cloud-speed) linear infinite;
+      top: var(--cloud-top);
+    }
+
+    .cloud::before,
+    .cloud::after {
+      content: "";
+      position: absolute;
+      bottom: 18%;
       border-radius: 50%;
-      box-shadow: 0 0 60px #fbbf24, 0 0 120px #f59e0b, 0 0 180px rgba(251, 191, 36, 0.4);
-      animation: sunPulse 5s infinite alternate cubic-bezier(0.4, 0, 0.6, 1);
-      z-index: 3;
-    }
-    @keyframes sunPulse {
-      0% { transform: scale(1) rotate(0deg); box-shadow: 0 0 50px #fbbf24, 0 0 100px #f59e0b; }
-      100% { transform: scale(1.2) rotate(5deg); box-shadow: 0 0 80px #fbbf24, 0 0 160px #f59e0b, 0 0 240px rgba(251, 191, 36, 0.6); }
+      background: inherit;
     }
 
-    /* 云朵飘动动画 - 更流畅的缓动 */
-    .cloud-wrap {
-      position: absolute;
-      z-index: 3;
-      opacity: 0.85;
-      will-change: transform;
-      filter: drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3));
-    }
-    @keyframes floatCloud {
-      0% { transform: translateX(-250px) scale(var(--scale, 1)); }
-      100% { transform: translateX(110vw) scale(var(--scale, 1)); }
+    .cloud::before {
+      left: 16%;
+      width: 38%;
+      height: 115%;
     }
 
-    /* 树木容器，固定在地面分界线 */
-    #tree-container {
+    .cloud::after {
+      right: 14%;
+      width: 34%;
+      height: 95%;
+    }
+
+    @keyframes cloudDrift {
+      from { transform: translateX(-24vw); }
+      to { transform: translateX(116vw); }
+    }
+
+    .top-bar {
       position: absolute;
-      bottom: 40%;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
+      top: 20px;
+      left: 24px;
+      right: 24px;
+      z-index: 20;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 18px;
       pointer-events: none;
-      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
     }
 
-    #tree-container::before {
+    .brand {
+      min-width: 0;
+      pointer-events: auto;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: clamp(1.45rem, 2.8vw, 2.8rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+      color: #132238;
+      text-shadow: 0 2px 0 rgba(255, 255, 255, 0.45);
+    }
+
+    .brand-subtitle {
+      margin: 8px 0 0;
+      color: rgba(23, 32, 51, 0.72);
+      font-size: 0.95rem;
+      font-weight: 650;
+    }
+
+    .lang-switch {
+      display: inline-grid;
+      grid-template-columns: repeat(2, minmax(56px, 1fr));
+      gap: 4px;
+      padding: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.58);
+      box-shadow: 0 12px 34px rgba(23, 32, 51, 0.14);
+      backdrop-filter: blur(18px);
+      pointer-events: auto;
+    }
+
+    .lang-button,
+    .path-button {
+      min-height: 44px;
+      cursor: pointer;
+      color: var(--ink);
+      transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .lang-button {
+      border-radius: 999px;
+      background: transparent;
+      padding: 0 14px;
+      font-weight: 800;
+    }
+
+    .lang-button[aria-pressed="true"] {
+      color: white;
+      background: #172033;
+      box-shadow: 0 8px 18px rgba(23, 32, 51, 0.22);
+    }
+
+    .stage {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 108px min(5vw, 64px) 274px;
+      pointer-events: none;
+    }
+
+    .model-wrap {
+      position: relative;
+      display: grid;
+      place-items: end center;
+      width: min(68vw, 720px);
+      height: min(56dvh, 560px);
+      min-height: 310px;
+      pointer-events: auto;
+    }
+
+    .model-wrap::before {
       content: "";
       position: absolute;
-      left: 50%;
-      bottom: -22px;
-      width: clamp(110px, 30vw, 360px);
-      height: clamp(28px, 7vw, 84px);
-      transform: translateX(-50%);
+      bottom: 7%;
+      width: min(68%, 480px);
+      height: 16%;
       border-radius: 50%;
-      background: radial-gradient(ellipse, var(--stage-glow, rgba(74, 222, 128, 0.32)) 0%, rgba(255,255,255,0) 70%);
-      filter: blur(4px);
-      z-index: -1;
+      background: radial-gradient(ellipse, var(--glow) 0%, rgba(255, 255, 255, 0) 72%);
+      filter: blur(10px);
+      animation: glowPulse 3.4s ease-in-out infinite alternate;
     }
 
-    #tree-container::after {
+    .model-wrap::after {
       content: "";
       position: absolute;
-      left: 50%;
-      bottom: -18px;
-      width: clamp(70px, 18vw, 220px);
-      height: clamp(14px, 3vw, 34px);
-      transform: translateX(-50%);
+      bottom: 7.5%;
+      width: min(42%, 310px);
+      height: 8%;
       border-radius: 50%;
-      background: rgba(36, 24, 12, 0.26);
-      filter: blur(6px);
-      z-index: -1;
+      background: rgba(18, 35, 24, 0.28);
+      filter: blur(8px);
     }
 
-    #tree-container[data-path="tree"] { --stage-glow: rgba(74, 222, 128, 0.42); }
-    #tree-container[data-path="chicken"] { --stage-glow: rgba(251, 191, 36, 0.48); }
-    #tree-container[data-path="house"] { --stage-glow: rgba(34, 211, 238, 0.38); }
-
-    #tree-container[data-stage="0"]::before,
-    #tree-container[data-stage="1"]::before {
-      width: clamp(80px, 18vw, 180px);
-      opacity: 0.65;
+    #model-container {
+      display: grid;
+      place-items: end center;
+      width: min(100%, 520px);
     }
 
-    #tree-container[data-stage="6"]::before,
-    #tree-container[data-stage="7"]::before {
-      opacity: 0.95;
-      animation: auraPulse 2.8s ease-in-out infinite alternate;
-    }
-
-    @keyframes auraPulse {
-      from { transform: translateX(-50%) scale(0.9); opacity: 0.55; }
-      to { transform: translateX(-50%) scale(1.12); opacity: 1; }
-    }
-
-    /* 树木生长时的弹性动画 - 更流畅 */
-    .tree-svg {
-      transform-origin: bottom center;
-      animation: growBounce 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    .model-svg {
+      position: relative;
+      z-index: 2;
       display: block;
-      max-width: min(52vw, 520px);
-      max-height: 70vh;
+      width: min(var(--model-width, 420px), 100%);
+      max-height: 100%;
       height: auto;
       overflow: visible;
-      transition: filter 0.3s ease, transform 0.3s ease;
-      filter: saturate(1.12) contrast(1.04) drop-shadow(0 18px 22px rgba(0, 0, 0, 0.32));
+      transform-origin: bottom center;
+      filter: drop-shadow(0 24px 28px rgba(23, 32, 51, 0.28));
+      animation: modelEnter 520ms cubic-bezier(0.2, 1.2, 0.28, 1), idleFloat 4.2s ease-in-out 560ms infinite;
     }
-    #tree-container[data-stage="3"] .tree-svg,
-    #tree-container[data-stage="4"] .tree-svg,
-    #tree-container[data-stage="5"] .tree-svg {
-      animation: growBounce 1s cubic-bezier(0.34, 1.56, 0.64, 1), gentleSway 4.8s ease-in-out infinite 1s;
+
+    .stage-badge {
+      position: absolute;
+      right: 0;
+      bottom: 15%;
+      z-index: 4;
+      min-width: 132px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.74);
+      border-radius: 8px;
+      color: white;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 88%, #111827), var(--accent));
+      box-shadow: 0 16px 40px rgba(23, 32, 51, 0.2);
+      text-align: left;
     }
-    #tree-container[data-stage="6"] .tree-svg,
-    #tree-container[data-stage="7"] .tree-svg {
-      animation: growBounce 1s cubic-bezier(0.34, 1.56, 0.64, 1), legendaryFloat 3.8s ease-in-out infinite 1s;
-      filter: saturate(1.24) contrast(1.08) drop-shadow(0 0 22px var(--stage-glow)) drop-shadow(0 22px 28px rgba(0, 0, 0, 0.35));
+
+    .stage-badge span {
+      display: block;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
     }
-    .tree-svg:hover {
-      filter: brightness(1.1) drop-shadow(0 12px 24px rgba(0,0,0,0.4));
+
+    .stage-badge strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 1rem;
+      line-height: 1.25;
     }
-    .tree-svg * {
-      vector-effect: non-scaling-stroke;
+
+    @keyframes glowPulse {
+      from { transform: scale(0.92); opacity: 0.64; }
+      to { transform: scale(1.08); opacity: 1; }
     }
-    .stage-detail {
+
+    @keyframes modelEnter {
+      0% { transform: translateY(22px) scale(0.82); opacity: 0; }
+      64% { transform: translateY(-5px) scale(1.04); opacity: 1; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    @keyframes idleFloat {
+      0%, 100% { transform: translateY(0) rotate(-0.35deg); }
+      50% { transform: translateY(-8px) rotate(0.35deg); }
+    }
+
+    .control-dock {
+      position: absolute;
+      left: 24px;
+      bottom: 22px;
+      z-index: 30;
+      display: grid;
+      grid-template-columns: minmax(280px, 430px) minmax(300px, 520px);
+      align-items: end;
+      gap: 16px;
       pointer-events: none;
     }
-    .stage-detail .soft-line {
-      fill: none;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-    @keyframes growBounce {
-      0% { transform: scale(0.2); opacity: 0; filter: brightness(2); }
-      40% { transform: scale(1.15); filter: brightness(1.3); }
-      70% { transform: scale(0.95); filter: brightness(0.95); }
-      100% { transform: scale(1); opacity: 1; filter: brightness(1); }
-    }
-    @keyframes gentleSway {
-      0%, 100% { transform: rotate(-0.8deg); }
-      50% { transform: rotate(0.8deg); }
-    }
-    @keyframes legendaryFloat {
-      0%, 100% { transform: translateY(0) rotate(-0.5deg); }
-      50% { transform: translateY(-10px) rotate(0.5deg); }
+
+    .control-surface {
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+      pointer-events: auto;
     }
 
-    #ui-panel {
-      top: 24px;
-      left: 24px;
-      width: min(360px, calc(100vw - 48px));
-      min-width: 0;
-      transform: none;
-      border-radius: 24px;
+    .stats-panel {
+      padding: 20px;
+    }
+
+    .path-panel {
+      padding: 14px;
+    }
+
+    .path-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .path-button {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.54);
       text-align: left;
-      opacity: 0.58;
-      transition: opacity 0.25s ease, box-shadow 0.3s ease, transform 0.3s ease;
+      border: 1px solid rgba(23, 32, 51, 0.08);
     }
 
-    #ui-panel.is-active {
-      opacity: 0.98;
+    .path-button svg {
+      width: 28px;
+      height: 28px;
+      color: var(--accent);
+    }
+
+    .path-button strong,
+    .path-button span {
+      display: block;
+      overflow-wrap: anywhere;
+    }
+
+    .path-button strong {
+      font-size: 0.96rem;
+      line-height: 1.1;
+    }
+
+    .path-button span {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .path-button[aria-pressed="true"] {
+      color: white;
+      background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 68%, #111827));
+      border-color: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 14px 26px color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+
+    .path-button[aria-pressed="true"] svg,
+    .path-button[aria-pressed="true"] span {
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      color: var(--accent);
+      font-size: 0.76rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .stage-name {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2.15rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .click-card {
+      min-width: 118px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: white;
+      background: #172033;
+      text-align: right;
+      box-shadow: 0 14px 28px rgba(23, 32, 51, 0.18);
+    }
+
+    .click-card span {
+      display: block;
+      color: rgba(255, 255, 255, 0.68);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .click-card strong {
+      display: inline-block;
+      margin-top: 2px;
+      font-size: 2rem;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: transform 120ms ease;
+    }
+
+    .progress-copy {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 750;
+    }
+
+    .progress-percent {
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-track {
+      position: relative;
+      height: 13px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(23, 32, 51, 0.12);
+      box-shadow: inset 0 1px 3px rgba(23, 32, 51, 0.18);
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent-2), var(--accent), var(--accent-3));
+      box-shadow: 0 0 18px var(--glow);
+      transition: width 260ms ease-out;
+    }
+
+    .milestones {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 5px;
+      margin-top: 12px;
+    }
+
+    .milestone {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(23, 32, 51, 0.14);
+      transition: background 200ms ease, transform 200ms ease;
+    }
+
+    .milestone.is-done {
+      background: var(--accent);
+    }
+
+    .milestone.is-current {
+      transform: scaleY(1.8);
+      background: var(--accent-3);
+    }
+
+    .hint {
+      margin: 14px 0 0;
+      color: rgba(23, 32, 51, 0.58);
+      font-size: 0.86rem;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .floating-number {
+      position: absolute;
+      z-index: 80;
+      pointer-events: none;
+      color: var(--accent-3);
+      font-size: 2rem;
+      font-weight: 950;
+      text-shadow: 0 4px 12px rgba(23, 32, 51, 0.24);
+      animation: floatUp 780ms ease-out forwards;
+    }
+
+    .particle {
+      position: absolute;
+      z-index: 70;
+      width: var(--size);
+      height: var(--size);
+      border-radius: 50%;
+      pointer-events: none;
+      background: var(--color);
+      box-shadow: 0 0 14px var(--color);
+      animation: particlePop 900ms ease-out forwards;
+    }
+
+    .pop {
+      animation: textPop 420ms cubic-bezier(0.2, 1.2, 0.3, 1);
+    }
+
+    @keyframes floatUp {
+      from { opacity: 1; transform: translateY(0) scale(0.82); }
+      to { opacity: 0; transform: translate(var(--drift), -112px) scale(1.06); }
+    }
+
+    @keyframes particlePop {
+      from { opacity: 1; transform: translate(0, 0) scale(1); }
+      to { opacity: 0; transform: translate(var(--vx), var(--vy)) scale(0.2); }
+    }
+
+    @keyframes textPop {
+      0% { transform: scale(1); }
+      48% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    button:focus-visible {
+      outline: 3px solid rgba(23, 32, 51, 0.72);
+      outline-offset: 3px;
     }
 
     @media (hover: hover) and (pointer: fine) {
-      #ui-panel:hover {
-        opacity: 0.98;
+      .lang-button:hover,
+      .path-button:hover {
+        transform: translateY(-1px);
       }
     }
 
-    #path-select,
-    #lang-select {
-      border-radius: 999px;
-      max-width: 100%;
-    }
-
-    #stage-line,
-    #next-goal,
-    #ui-instruction {
-      line-height: 1.35;
-    }
-
-    @media (max-width: 760px) {
-      .sun {
-        top: 72px;
-        right: 24px;
-        width: 72px;
-        height: 72px;
+    @media (max-width: 920px) {
+      .game-shell {
+        min-height: 720px;
       }
 
-      #tree-container {
-        bottom: clamp(330px, 46vh, 430px);
+      .top-bar {
+        align-items: flex-start;
+        left: 16px;
+        right: 16px;
+        top: 16px;
       }
 
-      .tree-svg {
-        max-width: 74vw;
-        max-height: 42vh;
+      .brand-subtitle {
+        max-width: 56vw;
+        font-size: 0.84rem;
       }
 
-      #ui-panel {
-        top: auto;
-        bottom: 14px;
-        left: 14px;
-        right: 14px;
-        width: auto;
-        padding: 16px 18px;
-        border-radius: 20px;
-        opacity: 0.36;
+      .stage {
+        padding: 118px 16px 288px;
       }
 
-      #ui-panel.is-active {
-        opacity: 0.96;
+      .model-wrap {
+        width: min(92vw, 540px);
+        height: min(48dvh, 470px);
+        min-height: 300px;
       }
 
-      #ui-title {
-        font-size: 1.35rem;
-        line-height: 1.15;
+      .stage-badge {
+        right: 10px;
+        bottom: 8%;
+        min-width: 116px;
       }
 
-      #click-count-row {
-        font-size: 2.75rem;
-        margin-bottom: 0.75rem;
+      .control-dock {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .path-panel {
+        order: -1;
+      }
+
+      .path-button {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+        padding: 10px 8px;
+      }
+
+      .path-button span {
+        display: none;
       }
     }
 
-    /* 漂浮的 +1 文字动画 - 更华丽 */
-    .floating-number {
-      position: absolute;
-      color: #fbbf24;
-      font-size: 36px;
-      font-weight: 900;
-      pointer-events: none;
-      text-shadow: 0 4px 0 #f59e0b, 0 6px 12px rgba(0,0,0,0.5), 0 0 20px rgba(251, 191, 36, 0.6);
-      animation: floatUp 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-      z-index: 100;
-    }
-    @keyframes floatUp {
-      0% { opacity: 1; transform: translate(0, 0) scale(0.6) rotate(-10deg); }
-      20% { transform: translate(calc(var(--drift) * 0.3), -40px) scale(1.3) rotate(5deg); }
-      100% { opacity: 0; transform: translate(var(--drift), -180px) scale(1) rotate(0deg); }
+    @media (max-width: 560px) {
+      .game-shell {
+        min-height: 660px;
+      }
+
+      .top-bar {
+        gap: 10px;
+      }
+
+      .brand-title {
+        max-width: 66vw;
+      }
+
+      .brand-subtitle {
+        display: none;
+      }
+
+      .lang-switch {
+        grid-template-columns: repeat(2, 44px);
+      }
+
+      .lang-button {
+        padding: 0;
+      }
+
+      .stage {
+        padding-top: 92px;
+        padding-bottom: 310px;
+      }
+
+      .model-wrap {
+        height: 40dvh;
+        min-height: 250px;
+      }
+
+      .stage-badge {
+        left: 50%;
+        right: auto;
+        bottom: -4px;
+        transform: translateX(-50%);
+        text-align: center;
+      }
+
+      .stats-panel {
+        padding: 16px;
+      }
+
+      .stats-header {
+        align-items: stretch;
+      }
+
+      .click-card {
+        min-width: 94px;
+      }
+
+      .click-card strong {
+        font-size: 1.55rem;
+      }
+
+      .hint {
+        margin-top: 10px;
+        font-size: 0.78rem;
+      }
     }
 
-    /* 升级时的粒子特效 - 更绚丽 */
-    .particle {
-      position: absolute;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 50;
-      animation: particleExplode 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
-      box-shadow: 0 0 12px currentColor;
-    }
-    @keyframes particleExplode {
-      0% { transform: translate(0, 0) scale(1); opacity: 1; }
-      100% { transform: translate(var(--vx), var(--vy)) scale(0); opacity: 0; }
-    }
-
-    /* 升级时文字弹跳动画 - 更生动 */
-    .pop-text {
-      animation: popTextAnim 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    }
-    @keyframes popTextAnim {
-      0% { transform: scale(1); color: #16a34a; text-shadow: none; }
-      50% { transform: scale(1.5); color: #f59e0b; text-shadow: 0 0 20px #fcd34d, 0 0 40px #fbbf24; }
-      100% { transform: scale(1); color: #16a34a; text-shadow: 0 4px 8px rgba(0,0,0,0.2); }
-    }
-
-    /* 自定义下拉框选项样式 */
-    #path-select option {
-      background-color: #047857;
-      color: white;
-      padding: 12px 20px;
-      font-weight: bold;
-      font-size: 16px;
-    }
-    #lang-select option {
-      background-color: #1d4ed8;
-      color: white;
-      padding: 12px 20px;
-      font-weight: bold;
-      font-size: 16px;
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
     }
   </style>
 </head>
-<body id="game-area" class="cursor-pointer">
+<body>
+<main id="game-area" class="game-shell" aria-label="Boring Click Game">
+  <div class="cloud" style="--cloud-top: 13%; --cloud-size: 180px; --cloud-speed: 46s; --cloud-opacity: 0.72;"></div>
+  <div class="cloud" style="--cloud-top: 24%; --cloud-size: 126px; --cloud-speed: 38s; --cloud-opacity: 0.54; animation-delay: -15s;"></div>
+  <div class="cloud" style="--cloud-top: 8%; --cloud-size: 220px; --cloud-speed: 58s; --cloud-opacity: 0.48; animation-delay: -31s;"></div>
 
-<!-- 背景元素 -->
-<div id="sky"></div>
-<div id="ground"></div>
-<div class="sun"></div>
+  <header class="top-bar">
+    <div class="brand">
+      <h1 id="ui-title" class="brand-title">种树点击模拟器</h1>
+      <p id="ui-subtitle" class="brand-subtitle">选择成长路线，点击世界推进下一阶段</p>
+    </div>
+    <div class="lang-switch control-surface" role="group" aria-label="Language">
+      <button class="lang-button" type="button" data-lang="zh" aria-pressed="true">中</button>
+      <button class="lang-button" type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+  </header>
 
-<!-- 动态云朵 -->
-<div class="cloud-wrap" style="top: 15%; animation: floatCloud 45s linear infinite; --scale: 1;">
-  <svg width="150" height="60" viewBox="0 0 150 60" fill="white">
-    <circle cx="30" cy="40" r="20"/><circle cx="70" cy="25" r="25"/><circle cx="110" cy="35" r="20"/><rect x="30" y="25" width="80" height="35" rx="15"/>
-  </svg>
-</div>
-<div class="cloud-wrap" style="top: 8%; animation: floatCloud 35s linear infinite; animation-delay: -15s; transform: scale(0.8); opacity: 0.6; --scale: 0.8;">
-  <svg width="150" height="60" viewBox="0 0 150 60" fill="white">
-    <circle cx="30" cy="40" r="20"/><circle cx="70" cy="25" r="25"/><circle cx="110" cy="35" r="20"/><rect x="30" y="25" width="80" height="35" rx="15"/>
-  </svg>
-</div>
-<div class="cloud-wrap" style="top: 25%; animation: floatCloud 50s linear infinite; animation-delay: -30s; transform: scale(1.2); opacity: 0.9; --scale: 1.2;">
-  <svg width="150" height="60" viewBox="0 0 150 60" fill="white">
-    <circle cx="30" cy="40" r="20"/><circle cx="70" cy="25" r="25"/><circle cx="110" cy="35" r="20"/><rect x="30" y="25" width="80" height="35" rx="15"/>
-  </svg>
-</div>
+  <section class="stage" aria-live="polite">
+    <div id="model-wrap" class="model-wrap">
+      <div class="stage-badge">
+        <span id="stage-index-label">阶段 1 / 8</span>
+        <strong id="entity-name">一颗小种子</strong>
+      </div>
+      <div id="model-container"></div>
+    </div>
+  </section>
 
-<!-- 新增语言选择器 -->
-<div class="absolute top-4 right-4 z-[100] pointer-events-auto">
-  <select id="lang-select" class="bg-gradient-to-r from-blue-500/90 to-cyan-500/90 backdrop-blur-md border-2 border-white/80 text-white py-2.5 px-5 rounded-full shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-300/50 cursor-pointer font-bold transition-all duration-300 hover:from-blue-600 hover:to-cyan-600 hover:shadow-[0_8px_30px_rgba(37,99,235,0.5)] hover:scale-105 text-sm drop-shadow-[0_3px_6px_rgba(0,0,0,0.3)]">
-    <option value="en">English</option>
-    <option value="zh">中文</option>
-  </select>
-</div>
+  <section class="control-dock" aria-label="Game controls">
+    <div class="stats-panel control-surface">
+      <div class="stats-header">
+        <div>
+          <p id="stage-label" class="eyebrow">当前阶段</p>
+          <h2 id="stage-name" class="stage-name">一颗小种子</h2>
+        </div>
+        <div class="click-card" aria-label="Click count">
+          <span id="clicks-label">点击数</span>
+          <strong id="click-count">0</strong>
+        </div>
+      </div>
 
-<!-- UI 面板 -->
-<div id="ui-panel" class="absolute bg-gradient-to-br from-white/95 via-emerald-50/90 to-sky-50/95 backdrop-blur-xl px-6 py-5 shadow-[0_18px_50px_-18px_rgba(15,23,42,0.45)] z-50 pointer-events-auto border border-white/80 transition-all duration-300 hover:shadow-[0_24px_60px_-18px_rgba(15,23,42,0.55)]">
+      <div class="progress-copy">
+        <span id="next-goal">距离进化为【生根发芽】还需 10 次点击</span>
+        <span id="progress-percent" class="progress-percent">0%</span>
+      </div>
+      <div class="progress-track" aria-hidden="true">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+      <div id="milestones" class="milestones" aria-hidden="true"></div>
+      <p id="ui-instruction" class="hint">点击屏幕空白处即可成长；每条路线都会单独保存本次页面中的进度。</p>
+    </div>
 
-  <!-- 新增：成长路径选择器 -->
-  <div class="mb-4 pointer-events-auto">
-    <select id="path-select" class="w-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 backdrop-blur-md border border-white/90 text-white py-3 px-4 shadow-[0_10px_32px_-14px_rgba(16,185,129,0.75)] focus:outline-none focus:ring-4 focus:ring-emerald-300/50 cursor-pointer font-bold transition-all duration-300 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 text-base drop-shadow-[0_3px_6px_rgba(0,0,0,0.25)]">
-      <option value="tree">🌲 Tree</option>
-      <option value="chicken">🐔 Chicken</option>
-      <option value="house">🏠 House</option>
-    </select>
-  </div>
-
-  <h1 id="ui-title" class="text-3xl font-black mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.16)] transition-colors text-green-700">🌲 Tree Planting</h1>
-  <p id="stage-line" class="text-gray-700 mb-4 font-semibold text-base"><span id="ui-current-stage">Current Stage: </span><span id="entity-name" class="font-bold inline-block transition-colors text-green-600">A Tiny Seed</span></p>
-
-  <div id="click-count-row" class="text-5xl font-black text-amber-500 mb-4 drop-shadow-[0_4px_8px_rgba(245,158,11,0.35)] tracking-tight">
-    <span id="click-count">0</span> <span id="ui-clicks-unit" class="text-2xl text-amber-600 font-bold tracking-normal">clicks</span>
-  </div>
-
-  <!-- 进度条 - 增强版 -->
-  <div class="w-full bg-gray-200/80 rounded-full h-5 mb-3 overflow-hidden shadow-inner relative border border-gray-300/50">
-    <div id="progress-fill" class="h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-green-400 via-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)]" style="width: 0%"></div>
-  </div>
-  <p id="next-goal" class="text-sm text-gray-600 font-semibold">10 more clicks to reach the next stage</p>
-
-  <p id="ui-instruction" class="text-xs text-gray-400 mt-5 border-t border-gray-200 pt-3 font-medium">👆 Click (or tap) anywhere on the screen like crazy!</p>
-</div>
-
-<!-- 实体容器 -->
-<div id="tree-container">
-  <!-- SVG 将由 JS 动态注入 -->
-</div>
+    <nav class="path-panel control-surface" aria-label="Growth path">
+      <div class="path-tabs" id="path-tabs"></div>
+    </nav>
+  </section>
+</main>
 
 <script>
-  // 定义不同成长路径的数据
-  const gameData = {
+  const thresholds = [0, 10, 30, 60, 100, 160, 250, 400];
+
+  const pathThemes = {
     tree: {
-      theme: { text: 'text-green-700', bg: 'bg-green-500', nameText: 'text-green-600', fill: 'from-green-400 via-green-500 to-green-600' },
-      stages: [
-        { clicks: 0, svg: `<svg width="50" height="30" viewBox="0 0 50 30" class="tree-svg"><ellipse cx="25" cy="20" rx="15" ry="10" fill="#6D4C41" stroke="#4E342E" stroke-width="2"/><path d="M20 15 Q25 10 30 15" stroke="#4E342E" stroke-width="1.5" fill="none"/></svg>` },
-        { clicks: 10, svg: `<svg width="70" height="60" viewBox="0 0 70 60" class="tree-svg"><path d="M35 50 Q30 30 20 20 Q35 25 38 35 Z" fill="#8BC34A"/><ellipse cx="35" cy="50" rx="12" ry="8" fill="#5D4037"/></svg>` },
-        { clicks: 30, svg: `<svg width="100" height="100" viewBox="0 0 100 100" class="tree-svg"><path d="M50 100 Q50 60 50 40" stroke="#7CB342" stroke-width="6" stroke-linecap="round"/><path d="M50 70 Q30 50 15 55 Q35 65 45 75 Z" fill="#8BC34A"/><path d="M50 55 Q70 30 85 40 Q65 55 55 60 Z" fill="#689F38"/><path d="M50 40 Q40 20 50 10 Q60 20 50 40 Z" fill="#9CCC65"/></svg>` },
-        { clicks: 60, svg: `<svg width="150" height="180" viewBox="0 0 150 180" class="tree-svg"><path d="M75 180 Q75 100 75 50" stroke="#795548" stroke-width="10" stroke-linecap="round"/><path d="M75 120 Q50 90 35 80" stroke="#795548" stroke-width="6" stroke-linecap="round"/><path d="M75 90 Q105 60 115 50" stroke="#795548" stroke-width="6" stroke-linecap="round"/><circle cx="35" cy="70" r="30" fill="#8BC34A"/><circle cx="115" cy="40" r="35" fill="#689F38"/><circle cx="75" cy="45" r="45" fill="#4CAF50"/></svg>` },
-        { clicks: 100, svg: `<svg width="250" height="300" viewBox="0 0 250 300" class="tree-svg"><path d="M125 300 L110 120 L140 120 Z" fill="#6D4C41"/><circle cx="70" cy="150" r="60" fill="#689F38"/><circle cx="180" cy="140" r="65" fill="#4CAF50"/><circle cx="125" cy="80" r="80" fill="#388E3C"/><circle cx="125" cy="120" r="50" fill="#2E7D32" opacity="0.3"/></svg>` },
-        { clicks: 160, svg: `<svg width="350" height="400" viewBox="0 0 350 400" class="tree-svg"><path d="M175 400 L145 180 L205 180 Z" fill="#5D4037"/><path d="M175 280 Q100 230 80 200" stroke="#5D4037" stroke-width="20" stroke-linecap="round"/><path d="M175 240 Q250 180 270 150" stroke="#5D4037" stroke-width="18" stroke-linecap="round"/><circle cx="80" cy="200" r="80" fill="#4CAF50"/><circle cx="270" cy="150" r="85" fill="#388E3C"/><circle cx="110" cy="110" r="95" fill="#2E7D32"/><circle cx="230" cy="90" r="90" fill="#4CAF50"/><circle cx="175" cy="60" r="110" fill="#1B5E20"/></svg>` },
-        { clicks: 250, svg: `<svg width="350" height="400" viewBox="0 0 350 400" class="tree-svg"><path d="M175 400 L145 180 L205 180 Z" fill="#5D4037"/><path d="M175 280 Q100 230 80 200" stroke="#5D4037" stroke-width="20" stroke-linecap="round"/><path d="M175 240 Q250 180 270 150" stroke="#5D4037" stroke-width="18" stroke-linecap="round"/><circle cx="80" cy="200" r="80" fill="#4CAF50"/><circle cx="270" cy="150" r="85" fill="#388E3C"/><circle cx="110" cy="110" r="95" fill="#2E7D32"/><circle cx="230" cy="90" r="90" fill="#4CAF50"/><circle cx="175" cy="60" r="110" fill="#1B5E20"/><circle cx="90" cy="180" r="12" fill="#F44336"/><circle cx="60" cy="210" r="10" fill="#E53935"/><circle cx="260" cy="120" r="12" fill="#F44336"/><circle cx="290" cy="160" r="11" fill="#E53935"/><circle cx="130" cy="90" r="13" fill="#F44336"/><circle cx="80" cy="110" r="10" fill="#E53935"/><circle cx="210" cy="70" r="12" fill="#F44336"/><circle cx="250" cy="80" r="10" fill="#E53935"/><circle cx="180" cy="40" r="13" fill="#F44336"/><circle cx="150" cy="140" r="12" fill="#F44336"/></svg>` },
-        { clicks: 400, svg: `<svg width="520" height="560" viewBox="0 0 520 560" class="tree-svg drop-shadow-[0_0_34px_rgba(74,222,128,0.8)]"><defs><radialGradient id="treeCrownGlow" cx="50%" cy="28%" r="60%"><stop offset="0%" stop-color="#bbf7d0"/><stop offset="45%" stop-color="#22c55e"/><stop offset="100%" stop-color="#14532d"/></radialGradient><linearGradient id="treeTrunkGlow" x1="0" x2="1"><stop offset="0%" stop-color="#3f1f12"/><stop offset="45%" stop-color="#7c3f22"/><stop offset="100%" stop-color="#2b160d"/></linearGradient></defs><path d="M258 560 C214 465 208 345 238 240 C252 187 268 187 282 240 C312 345 306 465 262 560 Z" fill="url(#treeTrunkGlow)"/><path d="M255 350 C170 310 120 250 80 165" stroke="#4a2a16" stroke-width="24" fill="none" stroke-linecap="round"/><path d="M270 330 C360 285 410 220 442 135" stroke="#4a2a16" stroke-width="24" fill="none" stroke-linecap="round"/><path d="M258 300 C220 228 214 150 260 75 C305 150 300 228 268 300" stroke="#5b341b" stroke-width="32" fill="none" stroke-linecap="round"/><ellipse cx="260" cy="178" rx="180" ry="150" fill="url(#treeCrownGlow)"/><circle cx="128" cy="205" r="98" fill="#15803d"/><circle cx="392" cy="198" r="104" fill="#16a34a"/><circle cx="98" cy="120" r="82" fill="#22c55e"/><circle cx="422" cy="112" r="86" fill="#4ade80"/><circle cx="190" cy="72" r="96" fill="#86efac"/><circle cx="324" cy="70" r="100" fill="#22c55e"/><circle cx="260" cy="36" r="88" fill="#bbf7d0" opacity="0.88"/><path d="M72 240 C145 310 210 325 258 312 C315 296 384 314 454 242" stroke="#bbf7d0" stroke-width="5" fill="none" opacity="0.72" stroke-dasharray="12 10"/><path d="M126 160 C154 220 142 270 126 326" stroke="#a7f3d0" stroke-width="4" fill="none" opacity="0.65"/><path d="M386 148 C348 220 370 290 396 350" stroke="#a7f3d0" stroke-width="4" fill="none" opacity="0.65"/><circle cx="114" cy="126" r="11" fill="#fef08a"/><circle cx="178" cy="238" r="9" fill="#fde68a"/><circle cx="250" cy="96" r="14" fill="#fef3c7"/><circle cx="334" cy="226" r="10" fill="#fef08a"/><circle cx="414" cy="148" r="12" fill="#fde68a"/><circle cx="294" cy="34" r="8" fill="#ecfccb"/><path d="M210 424 C178 482 132 510 86 535" stroke="#3f1f12" stroke-width="18" fill="none" stroke-linecap="round"/><path d="M304 424 C342 482 388 510 434 535" stroke="#3f1f12" stroke-width="18" fill="none" stroke-linecap="round"/></svg>` }
-      ]
+      accent: '#2f8f5b',
+      accent2: '#8ccf6f',
+      accent3: '#f2c85b',
+      glow: 'rgba(47, 143, 91, 0.36)',
+      skyTop: '#91d7ff',
+      skyMid: '#e4f8ff',
+      groundTop: '#86c96f',
+      groundDeep: '#346344'
     },
     chicken: {
-      theme: { text: 'text-amber-700', bg: 'bg-amber-500', nameText: 'text-amber-600', fill: 'from-amber-400 via-orange-500 to-red-500' },
-      stages: [
-        { clicks: 0, svg: `<svg width="50" height="40" viewBox="0 0 50 40" class="tree-svg"><ellipse cx="25" cy="25" rx="14" ry="18" fill="#FFF8E1" stroke="#FFCC80" stroke-width="2"/></svg>` },
-        { clicks: 10, svg: `<svg width="50" height="40" viewBox="0 0 50 40" class="tree-svg"><ellipse cx="25" cy="25" rx="14" ry="18" fill="#FFF8E1" stroke="#FFCC80" stroke-width="2"/><path d="M15 20 L22 25 L20 30 L28 32" stroke="#FFCC80" stroke-width="1.5" fill="none"/></svg>` },
-        { clicks: 30, svg: `<svg width="60" height="50" viewBox="0 0 60 50" class="tree-svg"><path d="M15 35 Q25 15 45 35 Z" fill="#FFF8E1"/><circle cx="30" cy="25" r="12" fill="#FFEE58"/><circle cx="26" cy="22" r="2" fill="#000"/><circle cx="34" cy="22" r="2" fill="#000"/><path d="M28 26 L32 26 L30 29 Z" fill="#FF9800"/><path d="M10 35 Q30 45 50 35 Q30 50 10 35 Z" fill="#FFF8E1"/></svg>` },
-        { clicks: 60, svg: `<svg width="80" height="70" viewBox="0 0 80 70" class="tree-svg"><path d="M35 60 L30 70 M45 60 L50 70" stroke="#FF9800" stroke-width="2"/><circle cx="40" cy="45" r="18" fill="#FFEE58"/><circle cx="40" cy="25" r="14" fill="#FFEE58"/><circle cx="35" cy="22" r="2" fill="#000"/><circle cx="45" cy="22" r="2" fill="#000"/><path d="M38 26 L42 26 L40 30 Z" fill="#FF9800"/><path d="M22 45 Q15 40 22 35 Z" fill="#FBC02D"/><path d="M58 45 Q65 40 58 35 Z" fill="#FBC02D"/></svg>` },
-        { clicks: 100, svg: `<svg width="120" height="120" viewBox="0 0 120 120" class="tree-svg"><path d="M50 110 L45 120 M70 110 L75 120" stroke="#FF9800" stroke-width="3"/><ellipse cx="60" cy="80" rx="30" ry="25" fill="#FAFAFA"/><circle cx="85" cy="50" r="18" fill="#FAFAFA"/><circle cx="80" cy="45" r="3" fill="#000"/><path d="M100 50 L110 55 L100 60 Z" fill="#FF9800"/><path d="M85 32 Q90 20 95 32 Z" fill="#F44336"/><path d="M30 80 Q10 70 20 60 Q30 65 40 70 Z" fill="#EEEEEE"/><path d="M60 90 Q40 100 20 95 Z" fill="#FAFAFA"/></svg>` },
-        { clicks: 160, svg: `<svg width="180" height="180" viewBox="0 0 180 180" class="tree-svg"><path d="M70 160 L60 180 M110 160 L120 180" stroke="#FF9800" stroke-width="4"/><ellipse cx="90" cy="110" rx="45" ry="35" fill="#FFFFFF"/><circle cx="130" cy="60" r="25" fill="#FFFFFF"/><circle cx="125" cy="50" r="4" fill="#000"/><path d="M150 60 L170 65 L150 75 Z" fill="#FF9800"/><path d="M125 35 Q135 15 145 35 Q140 20 120 30 Z" fill="#F44336"/><path d="M135 80 Q145 95 130 90 Z" fill="#F44336"/><path d="M45 110 Q10 90 20 70 Q30 80 50 90 Z" fill="#E0E0E0"/><path d="M90 140 Q40 150 10 130 Q30 160 80 145 Z" fill="#2E7D32"/><path d="M90 140 Q50 160 20 140 Q40 170 80 150 Z" fill="#1565C0"/></svg>` },
-        { clicks: 250, svg: `<svg width="250" height="250" viewBox="0 0 250 250" class="tree-svg drop-shadow-[0_0_15px_rgba(255,215,0,0.6)]"><path d="M100 220 L80 250 M150 220 L170 250" stroke="#FFB300" stroke-width="6"/><ellipse cx="125" cy="150" rx="60" ry="50" fill="#FFD54F"/><circle cx="180" cy="80" r="35" fill="#FFD54F"/><circle cx="170" cy="70" r="6" fill="#000"/><path d="M210 80 L240 85 L210 100 Z" fill="#FF8F00"/><path d="M175 45 Q190 15 205 45 Q195 20 165 40 Z" fill="#D84315"/><path d="M190 110 Q205 130 185 125 Z" fill="#D84315"/><path d="M65 150 Q20 120 30 90 Q45 105 75 120 Z" fill="#FFCA28"/><path d="M125 190 Q50 210 10 170 Q40 230 110 200 Z" fill="#FF8F00"/><path d="M125 190 Q70 230 20 190 Q50 240 110 210 Z" fill="#FF6F00"/></svg>` },
-        { clicks: 400, svg: `<svg width="520" height="560" viewBox="0 0 520 560" class="tree-svg drop-shadow-[0_0_36px_rgba(251,146,60,0.95)]"><defs><linearGradient id="phoenixBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff7ad"/><stop offset="45%" stop-color="#f97316"/><stop offset="100%" stop-color="#991b1b"/></linearGradient><linearGradient id="phoenixFlame" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fef08a"/><stop offset="45%" stop-color="#fb923c"/><stop offset="100%" stop-color="#dc2626"/></linearGradient></defs><circle cx="260" cy="240" r="125" fill="#f97316" opacity="0.18"/><path d="M218 505 L190 560 M300 505 L330 560" stroke="#f97316" stroke-width="11" stroke-linecap="round"/><path d="M142 410 C95 476 58 495 20 474 C92 548 176 518 230 444 Z" fill="#dc2626"/><path d="M378 410 C425 476 462 495 500 474 C428 548 344 518 290 444 Z" fill="#dc2626"/><path d="M260 456 C180 530 124 530 82 500 C150 575 232 552 260 492 C288 552 370 575 438 500 C396 530 340 530 260 456 Z" fill="url(#phoenixFlame)"/><ellipse cx="260" cy="352" rx="82" ry="135" fill="url(#phoenixBody)"/><path d="M192 342 C94 300 44 214 28 116 C104 160 164 226 220 306 Z" fill="url(#phoenixFlame)"/><path d="M328 342 C426 300 476 214 492 116 C416 160 356 226 300 306 Z" fill="url(#phoenixFlame)"/><path d="M88 148 C132 230 176 272 224 312" stroke="#fde68a" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.75"/><path d="M432 148 C388 230 344 272 296 312" stroke="#fde68a" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.75"/><circle cx="260" cy="184" r="54" fill="#fb923c"/><circle cx="244" cy="168" r="9" fill="#fff"/><circle cx="244" cy="168" r="4" fill="#111827"/><path d="M284 184 L352 198 L284 220 Z" fill="#facc15"/><path d="M242 132 C262 58 318 45 350 110 C304 82 282 112 270 142 Z" fill="#fef08a"/><path d="M236 134 C210 62 158 60 132 124 C178 94 208 116 228 148 Z" fill="#fb923c"/><path d="M260 98 C286 28 244 12 234 78 C248 70 258 78 260 98 Z" fill="#facc15"/><circle cx="116" cy="204" r="9" fill="#fef3c7"/><circle cx="404" cy="204" r="11" fill="#fef3c7"/><circle cx="260" cy="74" r="13" fill="#fef08a"/><circle cx="178" cy="462" r="8" fill="#fde68a"/><circle cx="342" cy="462" r="8" fill="#fde68a"/></svg>` }
-      ]
+      accent: '#c66a25',
+      accent2: '#f6c15d',
+      accent3: '#ef4444',
+      glow: 'rgba(246, 164, 61, 0.4)',
+      skyTop: '#ffc98d',
+      skyMid: '#fff0c7',
+      groundTop: '#d6a867',
+      groundDeep: '#704b2c'
     },
     house: {
-      theme: { text: 'text-blue-700', bg: 'bg-blue-500', nameText: 'text-blue-600', fill: 'from-cyan-400 via-blue-500 to-indigo-600' },
-      stages: [
-        { clicks: 0, svg: `<svg width="60" height="40" viewBox="0 0 60 40" class="tree-svg"><path d="M20 35 L40 35 L30 20 Z" fill="#FF5722"/><path d="M25 35 L35 35 L30 25 Z" fill="#FFEB3B"/><rect x="15" y="35" width="30" height="5" fill="#5D4037" rx="2"/></svg>` },
-        { clicks: 10, svg: `<svg width="90" height="70" viewBox="0 0 90 70" class="tree-svg"><path d="M10 70 L80 70 L80 40 L10 40 Z" fill="#D7CCC8"/><path d="M5 40 Q45 10 85 40 Z" fill="#FFCC80"/><rect x="40" y="50" width="15" height="20" fill="#5D4037"/></svg>` },
-        { clicks: 30, svg: `<svg width="140" height="110" viewBox="0 0 140 110" class="tree-svg"><rect x="20" y="50" width="100" height="60" fill="#8D6E63"/><path d="M10 50 L70 10 L130 50 Z" fill="#5D4037"/><rect x="60" y="70" width="20" height="40" fill="#3E2723"/><rect x="30" y="65" width="20" height="20" fill="#81D4FA"/><rect x="90" y="65" width="20" height="20" fill="#81D4FA"/><path d="M20 60 L120 60 M20 70 L120 70 M20 80 L120 80 M20 90 L120 90 M20 100 L120 100" stroke="#795548" stroke-width="2"/></svg>` },
-        { clicks: 60, svg: `<svg width="180" height="150" viewBox="0 0 180 150" class="tree-svg"><rect x="30" y="60" width="120" height="90" fill="#E57373"/><path d="M20 60 L90 20 L160 60 Z" fill="#424242"/><rect x="75" y="100" width="30" height="50" fill="#5D4037"/><rect x="45" y="80" width="20" height="30" fill="#81D4FA"/><rect x="115" y="80" width="20" height="30" fill="#81D4FA"/><path d="M120 20 L130 20 L130 50 L120 50 Z" fill="#BDBDBD"/></svg>` },
-        { clicks: 100, svg: `<svg width="260" height="200" viewBox="0 0 260 200" class="tree-svg"><rect x="40" y="100" width="180" height="100" fill="#F5F5F5"/><rect x="40" y="40" width="100" height="60" fill="#E0E0E0"/><path d="M30 40 L150 40 L150 30 L30 30 Z" fill="#424242"/><path d="M30 100 L230 100 L230 90 L30 90 Z" fill="#424242"/><rect x="180" y="100" width="40" height="100" fill="#90CAF9" opacity="0.6"/><rect x="60" y="120" width="50" height="80" fill="#81D4FA"/><rect x="130" y="140" width="30" height="60" fill="#795548"/><rect x="60" y="55" width="60" height="35" fill="#81D4FA"/></svg>` },
-        { clicks: 160, svg: `<svg width="220" height="320" viewBox="0 0 220 320" class="tree-svg"><rect x="40" y="20" width="140" height="300" fill="#CFD8DC"/><rect x="100" y="280" width="40" height="40" fill="#546E7A"/><rect x="60" y="40" width="30" height="30" fill="#90CAF9"/><rect x="130" y="40" width="30" height="30" fill="#90CAF9"/><rect x="60" y="90" width="30" height="30" fill="#90CAF9"/><rect x="130" y="90" width="30" height="30" fill="#90CAF9"/><rect x="60" y="140" width="30" height="30" fill="#90CAF9"/><rect x="130" y="140" width="30" height="30" fill="#90CAF9"/><rect x="60" y="190" width="30" height="30" fill="#90CAF9"/><rect x="130" y="190" width="30" height="30" fill="#90CAF9"/><rect x="60" y="240" width="30" height="30" fill="#90CAF9"/><rect x="130" y="240" width="30" height="30" fill="#90CAF9"/></svg>` },
-        { clicks: 250, svg: `<svg width="260" height="450" viewBox="0 0 260 450" class="tree-svg drop-shadow-[0_0_10px_rgba(144,202,249,0.5)]"><rect x="60" y="50" width="140" height="400" fill="#90A4AE"/><path d="M60 50 L130 10 L200 50 Z" fill="#78909C"/><pattern id="windows" x="0" y="0" width="20" height="30" patternUnits="userSpaceOnUse"><rect x="5" y="5" width="10" height="20" fill="#E3F2FD"/></pattern><rect x="70" y="60" width="120" height="390" fill="url(#windows)"/></svg>` },
-        { clicks: 400, svg: `<svg width="520" height="560" viewBox="0 0 520 560" class="tree-svg drop-shadow-[0_0_34px_rgba(34,211,238,0.9)]"><defs><linearGradient id="cityTower" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e0f2fe"/><stop offset="48%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#155e75"/></linearGradient><linearGradient id="cityCore" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#cffafe"/><stop offset="45%" stop-color="#22d3ee"/><stop offset="100%" stop-color="#312e81"/></linearGradient></defs><path d="M95 456 C160 520 360 520 425 456 C386 548 134 548 95 456 Z" fill="#111827"/><ellipse cx="260" cy="458" rx="178" ry="34" fill="#334155"/><path d="M72 448 C150 398 370 398 448 448" stroke="#22d3ee" stroke-width="6" fill="none"/><path d="M98 486 C170 428 350 428 422 486" stroke="#a5f3fc" stroke-width="4" fill="none" stroke-dasharray="10 8"/><rect x="92" y="302" width="54" height="150" rx="8" fill="#0891b2"/><rect x="158" y="230" width="58" height="222" rx="10" fill="url(#cityTower)"/><rect x="232" y="130" width="72" height="322" rx="12" fill="url(#cityCore)"/><rect x="322" y="260" width="50" height="192" rx="8" fill="#0e7490"/><rect x="386" y="332" width="42" height="120" rx="8" fill="#164e63"/><path d="M232 130 L268 54 L304 130 Z" fill="#bae6fd"/><circle cx="268" cy="36" r="17" fill="#ecfeff"/><path d="M188 230 L216 178 L216 230 Z" fill="#67e8f9"/><path d="M322 260 L372 216 L372 260 Z" fill="#38bdf8"/><g fill="#ecfeff" opacity="0.88"><rect x="106" y="324" width="14" height="24" rx="3"/><rect x="126" y="324" width="14" height="24" rx="3"/><rect x="106" y="364" width="14" height="24" rx="3"/><rect x="126" y="364" width="14" height="24" rx="3"/><rect x="176" y="258" width="18" height="28" rx="3"/><rect x="176" y="304" width="18" height="28" rx="3"/><rect x="176" y="350" width="18" height="28" rx="3"/><rect x="250" y="168" width="14" height="32" rx="3"/><rect x="274" y="168" width="14" height="32" rx="3"/><rect x="250" y="220" width="14" height="32" rx="3"/><rect x="274" y="220" width="14" height="32" rx="3"/><rect x="250" y="272" width="14" height="32" rx="3"/><rect x="274" y="272" width="14" height="32" rx="3"/><rect x="336" y="292" width="14" height="26" rx="3"/><rect x="336" y="336" width="14" height="26" rx="3"/></g><circle cx="126" cy="270" r="7" fill="#fff"/><circle cx="402" cy="298" r="6" fill="#cffafe"/><circle cx="268" cy="86" r="8" fill="#fff"/><path d="M68 408 C154 350 366 350 452 408" stroke="#67e8f9" stroke-width="3" fill="none" opacity="0.7"/><path d="M114 520 C200 470 320 470 406 520" stroke="#22d3ee" stroke-width="5" fill="none" opacity="0.45"/></svg>` }
-      ]
+      accent: '#2478a6',
+      accent2: '#5fc7e5',
+      accent3: '#8b7cf6',
+      glow: 'rgba(54, 178, 215, 0.4)',
+      skyTop: '#88cfff',
+      skyMid: '#e9f7ff',
+      groundTop: '#8db7aa',
+      groundDeep: '#344e68'
     }
   };
 
-  // 状态系统：各路径的数据互相独立
-  let currentPath = 'tree';
-  let pathState = {
-    tree: { clicks: 0, stageIndex: 0 },
-    chicken: { clicks: 0, stageIndex: 0 },
-    house: { clicks: 0, stageIndex: 0 }
-  };
-  let currentLang = 'zh';
-
-  // DOM 元素引用
-  const gameArea = document.getElementById('game-area');
-  const treeContainer = document.getElementById('tree-container');
-  const clickCountEl = document.getElementById('click-count');
-  const entityNameEl = document.getElementById('entity-name');
-  const progressFill = document.getElementById('progress-fill');
-  const nextGoalEl = document.getElementById('next-goal');
-  const langSelect = document.getElementById('lang-select');
-  const pathSelect = document.getElementById('path-select');
-  const uiPanel = document.getElementById('ui-panel');
-
-  // 多语言字典
-  const i18n = {
-    en: {
-      titles: { tree: "🌲 Tree Planting", chicken: "🐔 Chicken Raising", house: "🏠 City Building" },
-      tabs: { tree: "Tree", chicken: "Chicken", house: "Building" },
-      currentStage: "Current Stage: ",
-      clicksUnit: "clicks",
-      instruction: "👆 Click (or tap) anywhere on the screen like crazy!",
-      goalReached: "🎉 Congratulations! Maximum level reached!",
-      goalRemaining: (clicks, nextStage) => `${clicks} more clicks to evolve into 【${nextStage}】`,
-      stages: {
-        tree: ["A Tiny Seed", "Sprouting", "Sturdy Seedling", "Lush Sapling", "Thriving Tree", "Towering Tree", "Fruitful Tree", "Ancient World Tree"],
-        chicken: ["Egg", "Cracking Egg", "Hatching Chick", "Baby Chick", "Young Chicken", "Adult Rooster", "Golden Chicken", "Legendary Phoenix"],
-        house: ["Campfire", "Straw Hut", "Wooden Cabin", "Brick House", "Modern Villa", "Apartment Building", "Skyscraper", "Futuristic City"]
-      }
-    },
-    zh: {
-      titles: { tree: "🌲 种树模拟器", chicken: "🐔 养鸡模拟器", house: "🏠 建房模拟器" },
-      tabs: { tree: "树木", chicken: "家禽", house: "建筑" },
-      currentStage: "当前阶段: ",
-      clicksUnit: "次",
-      instruction: "👆 在屏幕任意空白处疯狂点击（或触摸）吧！",
-      goalReached: "🎉 恭喜！已达到最高进化形态！",
-      goalRemaining: (clicks, nextStage) => `距离进化为【${nextStage}】还需 ${clicks} 次点击`,
-      stages: {
-        tree: ["一颗小种子", "生根发芽", "茁壮小苗", "青葱树苗", "茂盛小树", "参天大树", "硕果累累的大树", "远古世界之树"],
-        chicken: ["鸡蛋", "破壳", "探头小鸡", "毛茸茸小鸡", "青年鸡", "成年大公鸡", "黄金斗鸡", "远古不死鸟"],
-        house: ["平地篝火", "简易破草屋", "温馨木屋", "坚固砖房", "现代大别墅", "小高层公寓", "摩天大楼", "赛博浮空城"]
-      }
-    }
-  };
-
-  // 初始化
-  function init() {
-    langSelect.value = currentLang;
-    updateLanguageUI();
-    updateVisuals(true);
-  }
-
-  function applyStagePresentation(stageIndex) {
-    treeContainer.dataset.path = currentPath;
-    treeContainer.dataset.stage = String(stageIndex);
-
-    const svg = treeContainer.querySelector('svg');
-    if (!svg) return;
-
-    svg.setAttribute('preserveAspectRatio', 'xMidYMax meet');
-    svg.classList.add('tree-svg');
-
-    if (stageIndex >= 6) {
-      svg.classList.add('legendary-stage');
-    }
-
-    const detail = stageDetails[currentPath]?.[stageIndex];
-    if (detail) {
-      svg.insertAdjacentHTML('beforeend', `<g class="stage-detail">${detail}</g>`);
-    }
-  }
-
-  const stageDetails = {
+  const stageMeta = {
     tree: [
-      `<ellipse cx="25" cy="16" rx="8" ry="4" fill="#8d6e63" opacity="0.55"/><path class="soft-line" d="M16 24 C22 28 30 28 36 24" stroke="#3e2723" stroke-width="1.2" opacity="0.45"/><circle cx="31" cy="17" r="1.5" fill="#a5d6a7"/>`,
-      `<path class="soft-line" d="M36 50 C44 40 50 34 58 31" stroke="#7cb342" stroke-width="3"/><path class="soft-line" d="M33 45 C25 37 18 34 12 32" stroke="#9ccc65" stroke-width="2.5"/><circle cx="43" cy="35" r="5" fill="#c5e1a5"/><circle cx="21" cy="33" r="4" fill="#dcedc8"/>`,
-      `<path class="soft-line" d="M50 48 C39 53 31 59 24 70" stroke="#33691e" stroke-width="2" opacity="0.65"/><path class="soft-line" d="M52 43 C61 48 68 56 75 67" stroke="#33691e" stroke-width="2" opacity="0.6"/><circle cx="50" cy="22" r="5" fill="#dcedc8"/><path class="soft-line" d="M44 91 C36 96 29 98 20 96" stroke="#795548" stroke-width="2" opacity="0.45"/>`,
-      `<path class="soft-line" d="M76 174 C67 150 70 118 75 88" stroke="#a1887f" stroke-width="2.5" opacity="0.5"/><path class="soft-line" d="M25 70 C45 82 58 83 75 70" stroke="#c5e1a5" stroke-width="3" opacity="0.65"/><path class="soft-line" d="M75 44 C91 54 105 55 122 42" stroke="#dcedc8" stroke-width="3" opacity="0.55"/><circle cx="98" cy="32" r="5" fill="#fef3c7" opacity="0.8"/>`,
-      `<path class="soft-line" d="M126 292 C114 245 116 190 126 136" stroke="#a1887f" stroke-width="4" opacity="0.45"/><path class="soft-line" d="M62 150 C92 170 132 164 164 138" stroke="#c8e6c9" stroke-width="4" opacity="0.6"/><path class="soft-line" d="M124 78 C146 108 177 120 214 112" stroke="#a5d6a7" stroke-width="4" opacity="0.55"/><circle cx="84" cy="120" r="7" fill="#fde68a"/><circle cx="182" cy="92" r="6" fill="#fef08a"/>`,
-      `<path class="soft-line" d="M176 392 C154 318 154 248 176 184" stroke="#a1887f" stroke-width="7" opacity="0.45"/><path class="soft-line" d="M70 202 C118 236 170 228 220 188" stroke="#bbf7d0" stroke-width="5" opacity="0.58"/><path class="soft-line" d="M118 112 C172 150 230 142 286 92" stroke="#86efac" stroke-width="5" opacity="0.48"/><circle cx="72" cy="196" r="8" fill="#fef08a"/><circle cx="250" cy="132" r="8" fill="#fde68a"/><circle cx="184" cy="58" r="10" fill="#ecfccb"/>`,
-      `<path class="soft-line" d="M175 388 C150 315 152 246 174 184" stroke="#a1887f" stroke-width="7" opacity="0.42"/><path class="soft-line" d="M64 204 C118 246 174 230 226 186" stroke="#bbf7d0" stroke-width="5" opacity="0.6"/><circle cx="92" cy="182" r="15" fill="#ef4444" opacity="0.9"/><circle cx="262" cy="122" r="15" fill="#f87171" opacity="0.92"/><circle cx="182" cy="42" r="16" fill="#fef08a" opacity="0.75"/><path class="soft-line" d="M126 92 C168 122 214 112 250 78" stroke="#dcfce7" stroke-width="4" opacity="0.55"/>`,
-      `<circle cx="260" cy="178" r="205" fill="none" stroke="#bbf7d0" stroke-width="4" opacity="0.28"/><circle cx="260" cy="178" r="232" fill="none" stroke="#fef08a" stroke-width="2" opacity="0.2"/><path class="soft-line" d="M76 250 C152 328 364 326 444 250" stroke="#ecfccb" stroke-width="4" opacity="0.62"/>`
+      { scale: 0.28, crown: 0, trunk: 0, fruit: 0, aura: 0 },
+      { scale: 0.34, crown: 1, trunk: 0.2, fruit: 0, aura: 0 },
+      { scale: 0.45, crown: 2, trunk: 0.4, fruit: 0, aura: 0 },
+      { scale: 0.58, crown: 3, trunk: 0.58, fruit: 0, aura: 0 },
+      { scale: 0.72, crown: 4, trunk: 0.76, fruit: 0, aura: 0 },
+      { scale: 0.86, crown: 5, trunk: 0.9, fruit: 0.2, aura: 0.15 },
+      { scale: 0.94, crown: 5, trunk: 1, fruit: 1, aura: 0.28 },
+      { scale: 1, crown: 6, trunk: 1.12, fruit: 0.55, aura: 0.62 }
     ],
     chicken: [
-      `<path class="soft-line" d="M16 24 L24 20 L31 26 L38 21" stroke="#fbbf24" stroke-width="1.5" opacity="0.7"/><ellipse cx="25" cy="30" rx="8" ry="3" fill="#ffe0b2" opacity="0.55"/>`,
-      `<path class="soft-line" d="M17 18 L25 24 L21 31 L31 35 L28 39" stroke="#f59e0b" stroke-width="2"/><path class="soft-line" d="M34 18 C39 22 40 28 36 34" stroke="#ffe0b2" stroke-width="2" opacity="0.8"/>`,
-      `<circle cx="22" cy="27" r="3" fill="#fff3c4" opacity="0.9"/><circle cx="38" cy="27" r="3" fill="#fff3c4" opacity="0.9"/><path class="soft-line" d="M19 38 C29 43 39 43 50 37" stroke="#fbbf24" stroke-width="2.5" opacity="0.7"/><path class="soft-line" d="M26 36 L22 43 M35 36 L39 43" stroke="#f59e0b" stroke-width="2"/>`,
-      `<path class="soft-line" d="M25 48 C35 56 48 56 57 48" stroke="#fff3c4" stroke-width="3" opacity="0.9"/><path class="soft-line" d="M22 45 C12 46 8 53 10 60" stroke="#fbbf24" stroke-width="2.5"/><path class="soft-line" d="M58 45 C68 46 72 53 70 60" stroke="#fbbf24" stroke-width="2.5"/><circle cx="31" cy="27" r="2" fill="#fff"/>`,
-      `<path class="soft-line" d="M32 80 C44 96 72 98 91 84" stroke="#e5e7eb" stroke-width="5" opacity="0.75"/><path class="soft-line" d="M78 33 C84 25 92 24 99 31" stroke="#ef4444" stroke-width="3"/><path class="soft-line" d="M44 108 L34 118 M78 108 L88 118" stroke="#fb923c" stroke-width="3"/><circle cx="83" cy="45" r="2" fill="#fff"/>`,
-      `<path class="soft-line" d="M40 112 C58 136 104 140 134 110" stroke="#f8fafc" stroke-width="6" opacity="0.75"/><path class="soft-line" d="M28 88 C48 104 64 108 84 106" stroke="#94a3b8" stroke-width="4" opacity="0.55"/><path class="soft-line" d="M132 36 C144 24 158 25 168 38" stroke="#ef4444" stroke-width="4"/><circle cx="128" cy="50" r="3" fill="#fff"/>`,
-      `<path class="soft-line" d="M54 150 C82 184 152 184 196 140" stroke="#fde68a" stroke-width="8" opacity="0.75"/><path class="soft-line" d="M42 112 C74 138 100 146 134 142" stroke="#f97316" stroke-width="5" opacity="0.65"/><path class="soft-line" d="M176 42 C194 22 218 28 230 52" stroke="#facc15" stroke-width="5"/><circle cx="176" cy="72" r="4" fill="#fff"/><circle cx="100" cy="188" r="6" fill="#fef3c7"/>`,
-      `<circle cx="260" cy="240" r="168" fill="none" stroke="#fed7aa" stroke-width="4" opacity="0.32"/><path class="soft-line" d="M74 160 C136 260 188 302 236 334" stroke="#fef3c7" stroke-width="6" opacity="0.58"/><path class="soft-line" d="M446 160 C384 260 332 302 284 334" stroke="#fef3c7" stroke-width="6" opacity="0.58"/><circle cx="260" cy="38" r="18" fill="#fff7ad" opacity="0.72"/>`
+      { scale: 0.3, age: 0, plume: 0, tail: 0, aura: 0 },
+      { scale: 0.34, age: 0.12, plume: 0, tail: 0, aura: 0 },
+      { scale: 0.42, age: 0.28, plume: 0, tail: 0.1, aura: 0 },
+      { scale: 0.5, age: 0.42, plume: 0.08, tail: 0.22, aura: 0 },
+      { scale: 0.64, age: 0.58, plume: 0.25, tail: 0.42, aura: 0 },
+      { scale: 0.76, age: 0.78, plume: 0.5, tail: 0.64, aura: 0.1 },
+      { scale: 0.88, age: 0.92, plume: 0.74, tail: 0.84, aura: 0.24 },
+      { scale: 1, age: 1, plume: 1, tail: 1, aura: 0.72 }
     ],
     house: [
-      `<circle cx="30" cy="26" r="15" fill="#fb923c" opacity="0.22"/><path class="soft-line" d="M24 34 C30 28 34 28 40 34" stroke="#fef3c7" stroke-width="2"/><path class="soft-line" d="M18 38 C28 41 38 41 48 38" stroke="#8d6e63" stroke-width="1.5"/>`,
-      `<path class="soft-line" d="M14 44 H76" stroke="#8d6e63" stroke-width="2" opacity="0.45"/><path class="soft-line" d="M20 38 C34 31 52 31 70 38" stroke="#ffe0b2" stroke-width="3" opacity="0.75"/><rect x="48" y="51" width="8" height="10" fill="#ffd54f" opacity="0.75"/>`,
-      `<path class="soft-line" d="M18 58 H122 M18 75 H122 M18 92 H122" stroke="#a1887f" stroke-width="2" opacity="0.58"/><path class="soft-line" d="M26 52 L70 22 L114 52" stroke="#d7ccc8" stroke-width="4" opacity="0.55"/><rect x="34" y="68" width="12" height="12" fill="#e0f7fa" opacity="0.8"/><rect x="94" y="68" width="12" height="12" fill="#e0f7fa" opacity="0.8"/>`,
-      `<path class="soft-line" d="M24 64 L90 28 L156 64" stroke="#cbd5e1" stroke-width="4" opacity="0.55"/><path class="soft-line" d="M42 92 H64 M116 92 H138" stroke="#e0f2fe" stroke-width="4" opacity="0.75"/><path class="soft-line" d="M124 16 C138 4 152 10 154 28" stroke="#e5e7eb" stroke-width="3" opacity="0.85"/><circle cx="90" cy="124" r="6" fill="#fef3c7" opacity="0.7"/>`,
-      `<path class="soft-line" d="M44 100 H224" stroke="#93c5fd" stroke-width="4" opacity="0.45"/><path class="soft-line" d="M54 50 H130" stroke="#ffffff" stroke-width="3" opacity="0.55"/><rect x="184" y="116" width="28" height="74" fill="#e0f2fe" opacity="0.35"/><circle cx="80" cy="72" r="5" fill="#fff" opacity="0.8"/>`,
-      `<path class="soft-line" d="M50 78 H170 M50 128 H170 M50 178 H170 M50 228 H170" stroke="#e0f2fe" stroke-width="3" opacity="0.42"/><path class="soft-line" d="M40 24 H180" stroke="#f8fafc" stroke-width="4" opacity="0.4"/><circle cx="78" cy="54" r="4" fill="#fff"/><circle cx="142" cy="204" r="4" fill="#fff"/>`,
-      `<path class="soft-line" d="M62 50 L130 12 L198 50" stroke="#cbd5e1" stroke-width="4" opacity="0.65"/><path class="soft-line" d="M78 72 H184 M78 132 H184 M78 192 H184 M78 252 H184 M78 312 H184" stroke="#cffafe" stroke-width="3" opacity="0.55"/><circle cx="130" cy="30" r="7" fill="#ecfeff"/><path class="soft-line" d="M42 420 C86 394 176 394 220 420" stroke="#38bdf8" stroke-width="4" opacity="0.45"/>`,
-      `<circle cx="268" cy="36" r="36" fill="none" stroke="#cffafe" stroke-width="3" opacity="0.3"/><path class="soft-line" d="M62 428 C148 374 372 374 458 428" stroke="#a5f3fc" stroke-width="4" opacity="0.55"/><path class="soft-line" d="M100 514 C192 456 328 456 420 514" stroke="#67e8f9" stroke-width="4" opacity="0.35"/>`
+      { scale: 0.28, floors: 0, tech: 0, aura: 0 },
+      { scale: 0.38, floors: 1, tech: 0, aura: 0 },
+      { scale: 0.48, floors: 2, tech: 0, aura: 0 },
+      { scale: 0.58, floors: 3, tech: 0.08, aura: 0 },
+      { scale: 0.68, floors: 4, tech: 0.2, aura: 0 },
+      { scale: 0.78, floors: 6, tech: 0.4, aura: 0.08 },
+      { scale: 0.9, floors: 8, tech: 0.62, aura: 0.18 },
+      { scale: 1, floors: 10, tech: 1, aura: 0.62 }
     ]
   };
 
-  function releasePanelFocus() {
-    requestAnimationFrame(() => {
-      const active = document.activeElement;
-      if (active === pathSelect || active === langSelect) {
-        active.blur();
+  const i18n = {
+    zh: {
+      titles: { tree: '种树点击模拟器', chicken: '养鸡点击模拟器', house: '建房点击模拟器' },
+      subtitle: '选择成长路线，点击世界推进下一阶段',
+      tabs: {
+        tree: { label: '树木', helper: '从种子到世界之树' },
+        chicken: { label: '家禽', helper: '从鸡蛋到不死鸟' },
+        house: { label: '建筑', helper: '从篝火到浮空城' }
+      },
+      stageLabel: '当前阶段',
+      clicksLabel: '点击数',
+      stageIndex: (current, total) => `阶段 ${current} / ${total}`,
+      instruction: '点击屏幕空白处即可成长；每条路线都会单独保存本次页面中的进度。',
+      goalReached: '已达到最高形态，继续点击也会记录成长值',
+      goalRemaining: (clicks, nextStage) => `距离进化为【${nextStage}】还需 ${clicks} 次点击`,
+      stages: {
+        tree: ['一颗小种子', '生根发芽', '茁壮小苗', '青葱树苗', '茂盛小树', '参天大树', '硕果累累的大树', '远古世界之树'],
+        chicken: ['鸡蛋', '破壳', '探头小鸡', '毛茸茸小鸡', '青年鸡', '成年大公鸡', '黄金斗鸡', '远古不死鸟'],
+        house: ['平地篝火', '简易草屋', '温馨木屋', '坚固砖房', '现代别墅', '高层公寓', '摩天大楼', '赛博浮空城']
       }
-      uiPanel.classList.remove('is-active');
+    },
+    en: {
+      titles: { tree: 'Tree Planting Click', chicken: 'Chicken Raising Click', house: 'City Building Click' },
+      subtitle: 'Choose a growth path, then click the world forward',
+      tabs: {
+        tree: { label: 'Tree', helper: 'Seed to world tree' },
+        chicken: { label: 'Chicken', helper: 'Egg to phoenix' },
+        house: { label: 'Building', helper: 'Campfire to sky city' }
+      },
+      stageLabel: 'Current stage',
+      clicksLabel: 'Clicks',
+      stageIndex: (current, total) => `Stage ${current} / ${total}`,
+      instruction: 'Click open space to grow. Each path keeps its own progress during this page session.',
+      goalReached: 'Maximum form reached. Extra clicks still count as growth.',
+      goalRemaining: (clicks, nextStage) => `${clicks} clicks until 【${nextStage}】`,
+      stages: {
+        tree: ['A Tiny Seed', 'Sprouting', 'Sturdy Seedling', 'Lush Sapling', 'Thriving Tree', 'Towering Tree', 'Fruitful Tree', 'Ancient World Tree'],
+        chicken: ['Egg', 'Cracking Egg', 'Hatching Chick', 'Baby Chick', 'Young Chicken', 'Adult Rooster', 'Golden Chicken', 'Legendary Phoenix'],
+        house: ['Campfire', 'Straw Hut', 'Wooden Cabin', 'Brick House', 'Modern Villa', 'Apartment Building', 'Skyscraper', 'Futuristic Sky City']
+      }
+    }
+  };
+
+  const state = {
+    currentPath: 'tree',
+    currentLang: 'zh',
+    paths: {
+      tree: { clicks: 0, stageIndex: 0 },
+      chicken: { clicks: 0, stageIndex: 0 },
+      house: { clicks: 0, stageIndex: 0 }
+    }
+  };
+
+  const els = {
+    gameArea: document.getElementById('game-area'),
+    title: document.getElementById('ui-title'),
+    subtitle: document.getElementById('ui-subtitle'),
+    pathTabs: document.getElementById('path-tabs'),
+    modelWrap: document.getElementById('model-wrap'),
+    modelContainer: document.getElementById('model-container'),
+    stageIndexLabel: document.getElementById('stage-index-label'),
+    entityName: document.getElementById('entity-name'),
+    stageLabel: document.getElementById('stage-label'),
+    stageName: document.getElementById('stage-name'),
+    clicksLabel: document.getElementById('clicks-label'),
+    clickCount: document.getElementById('click-count'),
+    nextGoal: document.getElementById('next-goal'),
+    progressPercent: document.getElementById('progress-percent'),
+    progressFill: document.getElementById('progress-fill'),
+    milestones: document.getElementById('milestones'),
+    instruction: document.getElementById('ui-instruction')
+  };
+
+  function icon(path) {
+    const icons = {
+      tree: '<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3 5 16h6L4 25h10v4h4v-4h10l-7-9h6L16 3Z"/></svg>',
+      chicken: '<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M20 4c1 2 1 4-1 6 4 1 7 4 7 9 0 6-5 10-11 10S4 25 4 19c0-5 4-9 9-9 0-3 2-5 7-6Zm-5 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm8 2 6 2-6 3v-5Z"/></svg>',
+      house: '<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M4 15 16 5l12 10-2 2v11h-7v-8h-6v8H6V17l-2-2Z"/></svg>'
+    };
+    return icons[path];
+  }
+
+  function modelShell(width, height, inner, scale = 1) {
+    const modelWidth = Math.round(width * Math.min(1, Math.max(0.28, scale)));
+    return `<svg class="model-svg" style="--model-width:${modelWidth}px" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${i18n[state.currentLang].stages[state.currentPath][state.paths[state.currentPath].stageIndex]}">${inner}</svg>`;
+  }
+
+  function renderTreeModel(params) {
+    const crownSize = params.crown;
+    const fruitOpacity = params.fruit;
+    const aura = params.aura;
+    const seedMode = crownSize === 0;
+
+    if (seedMode) {
+      return modelShell(520, 560, `
+        <ellipse cx="260" cy="492" rx="124" ry="30" fill="#3b2b1d" opacity="0.2"/>
+        <ellipse cx="260" cy="444" rx="82" ry="54" fill="#7a4b2a"/>
+        <path d="M214 430 C246 402 282 402 314 430" fill="none" stroke="#3e2a1d" stroke-width="12" stroke-linecap="round"/>
+        <path d="M260 390 C268 368 284 354 308 348" fill="none" stroke="#63a957" stroke-width="10" stroke-linecap="round"/>
+        <circle cx="311" cy="346" r="16" fill="#9ad36e"/>
+      `, params.scale);
+    }
+
+    const crownLayers = [
+      [260, 166, 88, '#b7e77b'],
+      [180, 246, 106, '#75bd5a'],
+      [340, 238, 114, '#58a94d'],
+      [254, 250, 132, '#3f9444'],
+      [150, 318, 82, '#4f9f47'],
+      [382, 322, 88, '#357f3c']
+    ].slice(0, Math.min(6, crownSize));
+
+    const fruit = fruitOpacity > 0 ? `
+      <g opacity="${fruitOpacity}">
+        <circle cx="176" cy="274" r="14" fill="#ef4444"/><circle cx="362" cy="260" r="13" fill="#f97316"/>
+        <circle cx="260" cy="164" r="12" fill="#facc15"/><circle cx="226" cy="338" r="12" fill="#ef4444"/>
+        <circle cx="318" cy="346" r="11" fill="#facc15"/>
+      </g>` : '';
+
+    return modelShell(520, 560, `
+      <defs>
+        <linearGradient id="treeTrunk" x1="0" x2="1"><stop offset="0%" stop-color="#4a2d1b"/><stop offset="52%" stop-color="#7c4a2b"/><stop offset="100%" stop-color="#2c1a11"/></linearGradient>
+        <radialGradient id="treeAura" cx="50%" cy="32%" r="55%"><stop offset="0%" stop-color="#ecfccb"/><stop offset="58%" stop-color="#86efac" stop-opacity="0.42"/><stop offset="100%" stop-color="#86efac" stop-opacity="0"/></radialGradient>
+      </defs>
+      <circle cx="260" cy="238" r="220" fill="url(#treeAura)" opacity="${aura}"/>
+      <path d="M260 530 C222 430 224 316 248 228 C254 205 266 205 272 228 C296 316 298 430 260 530 Z" fill="url(#treeTrunk)"/>
+      <path d="M252 360 C190 326 144 288 112 220" stroke="#4a2d1b" stroke-width="${18 * params.trunk}" fill="none" stroke-linecap="round"/>
+      <path d="M272 344 C334 304 384 250 418 180" stroke="#4a2d1b" stroke-width="${18 * params.trunk}" fill="none" stroke-linecap="round"/>
+      ${crownLayers.map(([cx, cy, r, fill]) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}"/>`).join('')}
+      <path d="M116 320 C178 364 344 368 410 312" fill="none" stroke="#dcfce7" stroke-width="8" opacity="0.52" stroke-linecap="round"/>
+      ${fruit}
+    `, params.scale);
+  }
+
+  function renderChickenModel(params) {
+    const isEgg = params.age < 0.2;
+    if (isEgg) {
+      const crack = params.age > 0 ? '<path d="M238 258 270 288 248 326 286 350 270 394" fill="none" stroke="#d97706" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>' : '';
+      return modelShell(520, 560, `
+        <ellipse cx="260" cy="492" rx="128" ry="32" fill="#3b2b1d" opacity="0.18"/>
+        <path d="M260 116 C344 116 404 220 404 346 C404 442 344 502 260 502 C176 502 116 442 116 346 C116 220 176 116 260 116Z" fill="#fff5d6" stroke="#f2c35f" stroke-width="12"/>
+        ${crack}
+        <ellipse cx="224" cy="210" rx="34" ry="22" fill="#fffaf0" opacity="0.65"/>
+      `, params.scale);
+    }
+
+    const tail = params.tail;
+    const plume = params.plume;
+    const aura = params.aura;
+    const bodyFill = params.age > 0.86 ? '#f5b73e' : params.age > 0.55 ? '#fff7d6' : '#f9d84f';
+    const wingFill = params.age > 0.86 ? '#ef7b2d' : '#f2c447';
+    const tailGroup = tail > 0 ? `
+      <g opacity="${tail}">
+        <path d="M142 374 C70 330 52 250 74 178 C132 220 174 274 206 342 Z" fill="${wingFill}"/>
+        <path d="M128 418 C72 458 38 448 18 410 C88 436 142 398 206 350 Z" fill="#dd5f2a"/>
+        <path d="M378 374 C450 330 468 250 446 178 C388 220 346 274 314 342 Z" fill="${wingFill}"/>
+        <path d="M392 418 C448 458 482 448 502 410 C432 436 378 398 314 350 Z" fill="#dd5f2a"/>
+      </g>` : '';
+    const plumeGroup = plume > 0 ? `
+      <g opacity="${plume}">
+        <path d="M250 142 C270 70 330 72 350 132 C312 112 286 118 266 156 Z" fill="#ef4444"/>
+        <path d="M238 146 C214 76 164 84 146 144 C186 120 216 124 238 164 Z" fill="#f97316"/>
+        <path d="M260 116 C280 42 232 40 232 104 C246 96 256 102 260 116 Z" fill="#facc15"/>
+      </g>` : '';
+
+    return modelShell(520, 560, `
+      <defs>
+        <radialGradient id="phoenixAura" cx="50%" cy="48%" r="54%"><stop offset="0%" stop-color="#fff7ad"/><stop offset="64%" stop-color="#fb923c" stop-opacity="0.38"/><stop offset="100%" stop-color="#fb923c" stop-opacity="0"/></radialGradient>
+      </defs>
+      <circle cx="260" cy="292" r="220" fill="url(#phoenixAura)" opacity="${aura}"/>
+      <ellipse cx="260" cy="492" rx="148" ry="32" fill="#3b2b1d" opacity="0.18"/>
+      ${tailGroup}
+      <path d="M214 486 L190 540 M306 486 L334 540" stroke="#d97706" stroke-width="12" stroke-linecap="round"/>
+      <ellipse cx="260" cy="368" rx="104" ry="132" fill="${bodyFill}"/>
+      <path d="M196 366 C156 352 134 320 134 282 C178 296 206 324 224 360 Z" fill="${wingFill}" opacity="0.86"/>
+      <circle cx="278" cy="210" r="70" fill="${bodyFill}"/>
+      ${plumeGroup}
+      <circle cx="256" cy="194" r="9" fill="#111827"/>
+      <circle cx="253" cy="190" r="3" fill="#ffffff"/>
+      <path d="M318 214 L390 232 L318 256 Z" fill="#f59e0b"/>
+      <path d="M294 268 C322 288 324 314 292 310" fill="#ef4444" opacity="${Math.max(0.35, plume)}"/>
+      <path d="M210 390 C246 426 304 426 344 388" fill="none" stroke="#fffaf0" stroke-width="10" opacity="0.62" stroke-linecap="round"/>
+    `, params.scale);
+  }
+
+  function renderHouseModel(params) {
+    const floors = params.floors;
+    const tech = params.tech;
+    const aura = params.aura;
+
+    if (floors === 0) {
+      return modelShell(520, 560, `
+        <ellipse cx="260" cy="500" rx="150" ry="32" fill="#3b2b1d" opacity="0.18"/>
+        <path d="M210 470 C246 420 240 376 260 318 C282 376 274 420 314 470 C280 498 244 498 210 470 Z" fill="#f97316"/>
+        <path d="M238 464 C258 428 252 390 268 354 C286 394 286 430 308 464 C284 482 260 484 238 464 Z" fill="#fde047"/>
+        <path d="M160 506 H360" stroke="#6b4226" stroke-width="18" stroke-linecap="round"/>
+        <path d="M190 500 H330" stroke="#3f2a1d" stroke-width="10" stroke-linecap="round"/>
+      `, params.scale);
+    }
+
+    const isTower = floors >= 6;
+    const width = isTower ? 170 : 260;
+    const baseX = 260 - width / 2;
+    const height = isTower ? 70 + floors * 34 : 120 + floors * 20;
+    const y = 500 - height;
+    const windowRows = Array.from({ length: Math.min(8, floors + 1) }, (_, row) => row);
+    const windowCols = isTower ? [0, 1, 2] : [0, 1, 2, 3];
+    const windows = windowRows.map((row) => windowCols.map((col) => {
+      const wx = baseX + 28 + col * (isTower ? 40 : 52);
+      const wy = y + 36 + row * 38;
+      if (wy > 452) return '';
+      return `<rect x="${wx}" y="${wy}" width="${isTower ? 22 : 28}" height="24" rx="4" fill="${tech > 0.55 ? '#ecfeff' : '#bae6fd'}" opacity="${0.74 + tech * 0.2}"/>`;
+    }).join('')).join('');
+    const roof = isTower
+      ? `<path d="M${baseX} ${y} L260 ${Math.max(52, y - 86)} L${baseX + width} ${y} Z" fill="${tech > 0.55 ? '#a5f3fc' : '#586577'}"/>`
+      : `<path d="M${baseX - 34} ${y + 10} L260 ${y - 64} L${baseX + width + 34} ${y + 10} Z" fill="#51443b"/>`;
+    const techLines = tech > 0 ? `
+      <g opacity="${tech}">
+        <path d="M72 444 C160 394 360 394 448 444" fill="none" stroke="#67e8f9" stroke-width="6" stroke-linecap="round"/>
+        <path d="M112 518 C200 468 320 468 408 518" fill="none" stroke="#22d3ee" stroke-width="5" opacity="0.58" stroke-linecap="round"/>
+        <circle cx="260" cy="${Math.max(34, y - 108)}" r="18" fill="#ecfeff"/>
+      </g>` : '';
+
+    return modelShell(520, 560, `
+      <defs>
+        <linearGradient id="buildingBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${tech > 0.55 ? '#cffafe' : '#f6f2e8'}"/><stop offset="52%" stop-color="${tech > 0.55 ? '#22d3ee' : '#d0c7b8'}"/><stop offset="100%" stop-color="${tech > 0.55 ? '#155e75' : '#8f7f6b'}"/></linearGradient>
+        <radialGradient id="cityAura" cx="50%" cy="42%" r="58%"><stop offset="0%" stop-color="#ecfeff"/><stop offset="60%" stop-color="#22d3ee" stop-opacity="0.36"/><stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/></radialGradient>
+      </defs>
+      <circle cx="260" cy="280" r="224" fill="url(#cityAura)" opacity="${aura}"/>
+      <ellipse cx="260" cy="500" rx="174" ry="34" fill="#1f2937" opacity="0.28"/>
+      ${roof}
+      <rect x="${baseX}" y="${y}" width="${width}" height="${height}" rx="${isTower ? 14 : 8}" fill="url(#buildingBody)"/>
+      ${windows}
+      <rect x="${260 - (isTower ? 23 : 32)}" y="${500 - (isTower ? 58 : 64)}" width="${isTower ? 46 : 64}" height="${isTower ? 58 : 64}" rx="5" fill="${tech > 0.55 ? '#164e63' : '#5d4037'}"/>
+      ${techLines}
+    `, params.scale);
+  }
+
+  const modelRenderers = {
+    tree: renderTreeModel,
+    chicken: renderChickenModel,
+    house: renderHouseModel
+  };
+
+  function currentData() {
+    return state.paths[state.currentPath];
+  }
+
+  function getStageIndex(clicks) {
+    for (let i = thresholds.length - 1; i >= 0; i--) {
+      if (clicks >= thresholds[i]) return i;
+    }
+    return 0;
+  }
+
+  function applyTheme() {
+    const theme = pathThemes[state.currentPath];
+    Object.entries({
+      '--accent': theme.accent,
+      '--accent-2': theme.accent2,
+      '--accent-3': theme.accent3,
+      '--glow': theme.glow,
+      '--sky-top': theme.skyTop,
+      '--sky-mid': theme.skyMid,
+      '--ground-top': theme.groundTop,
+      '--ground-deep': theme.groundDeep
+    }).forEach(([key, value]) => document.documentElement.style.setProperty(key, value));
+  }
+
+  function renderPathTabs() {
+    const lang = i18n[state.currentLang];
+    els.pathTabs.innerHTML = Object.keys(state.paths).map((path) => {
+      const pathState = state.paths[path];
+      const isActive = path === state.currentPath;
+      return `
+        <button class="path-button" type="button" data-path="${path}" aria-pressed="${isActive}">
+          ${icon(path)}
+          <span>
+            <strong>${lang.tabs[path].label}</strong>
+            <span>${lang.tabs[path].helper} · ${pathState.clicks}</span>
+          </span>
+        </button>`;
+    }).join('');
+  }
+
+  function renderMilestones(stageIndex) {
+    els.milestones.innerHTML = thresholds.map((_, index) => {
+      const className = index < stageIndex ? 'milestone is-done' : index === stageIndex ? 'milestone is-current' : 'milestone';
+      return `<span class="${className}"></span>`;
+    }).join('');
+  }
+
+  function renderModel(stageIndex) {
+    const params = stageMeta[state.currentPath][stageIndex];
+    els.modelContainer.innerHTML = modelRenderers[state.currentPath](params);
+  }
+
+  function updateUI(options = {}) {
+    const lang = i18n[state.currentLang];
+    const data = currentData();
+    const nextStageIndex = getStageIndex(data.clicks);
+    const changedStage = nextStageIndex !== data.stageIndex || options.forceModel;
+    data.stageIndex = nextStageIndex;
+    const stageName = lang.stages[state.currentPath][data.stageIndex];
+
+    applyTheme();
+    document.documentElement.lang = state.currentLang === 'zh' ? 'zh-CN' : 'en';
+    document.title = lang.titles[state.currentPath];
+    els.title.textContent = lang.titles[state.currentPath];
+    els.subtitle.textContent = lang.subtitle;
+    els.stageLabel.textContent = lang.stageLabel;
+    els.clicksLabel.textContent = lang.clicksLabel;
+    els.instruction.textContent = lang.instruction;
+    els.entityName.textContent = stageName;
+    els.stageName.textContent = stageName;
+    els.stageIndexLabel.textContent = lang.stageIndex(data.stageIndex + 1, thresholds.length);
+    els.clickCount.textContent = data.clicks;
+
+    if (changedStage) {
+      renderModel(data.stageIndex);
+      els.stageName.classList.remove('pop');
+      void els.stageName.offsetWidth;
+      els.stageName.classList.add('pop');
+    }
+
+    const currentThreshold = thresholds[data.stageIndex];
+    const nextThreshold = thresholds[data.stageIndex + 1] ?? currentThreshold;
+    let progress = 100;
+    if (data.stageIndex < thresholds.length - 1) {
+      progress = ((data.clicks - currentThreshold) / (nextThreshold - currentThreshold)) * 100;
+      const nextName = lang.stages[state.currentPath][data.stageIndex + 1];
+      els.nextGoal.textContent = lang.goalRemaining(nextThreshold - data.clicks, nextName);
+    } else {
+      els.nextGoal.textContent = lang.goalReached;
+    }
+
+    const clampedProgress = Math.max(0, Math.min(100, progress));
+    els.progressFill.style.width = `${clampedProgress}%`;
+    els.progressPercent.textContent = `${Math.round(clampedProgress)}%`;
+    renderMilestones(data.stageIndex);
+    renderPathTabs();
+  }
+
+  function switchPath(path) {
+    if (!state.paths[path] || path === state.currentPath) return;
+    state.currentPath = path;
+    updateUI({ forceModel: true });
+  }
+
+  function switchLang(lang) {
+    if (!i18n[lang] || lang === state.currentLang) return;
+    state.currentLang = lang;
+    document.querySelectorAll('.lang-button').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
     });
+    updateUI({ forceModel: true });
   }
 
-  uiPanel.addEventListener('focusin', () => {
-    uiPanel.classList.add('is-active');
-  });
-
-  uiPanel.addEventListener('focusout', () => {
-    setTimeout(() => {
-      if (!uiPanel.contains(document.activeElement)) {
-        uiPanel.classList.remove('is-active');
-      }
-    }, 0);
-  });
-
-  // 监听成长路径切换
-  pathSelect.addEventListener('change', (e) => {
-    const selectedPath = e.target.value;
-    if (selectedPath !== currentPath) {
-      currentPath = selectedPath;
-      updateLanguageUI();
-      updateVisuals(true); // true 代表静默切换，不播放粒子爆炸特效
-      releasePanelFocus();
-    }
-  });
-
-  // 更新静态文本语言
-  function updateLanguageUI() {
-    const langData = i18n[currentLang];
-
-    document.getElementById('ui-title').innerText = langData.titles[currentPath];
-    document.title = langData.titles[currentPath];
-
-    // 更新下拉框选项文本
-    pathSelect.options[0].text = `🌲 ${langData.tabs.tree}`;
-    pathSelect.options[1].text = `🐔 ${langData.tabs.chicken}`;
-    pathSelect.options[2].text = `🏠 ${langData.tabs.house}`;
-    pathSelect.value = currentPath;
-
-    document.getElementById('ui-current-stage').innerText = langData.currentStage;
-    document.getElementById('ui-clicks-unit').innerText = langData.clicksUnit;
-    document.getElementById('ui-instruction').innerText = langData.instruction;
-  }
-
-  // 监听语言切换
-  langSelect.addEventListener('change', (e) => {
-    currentLang = e.target.value;
-    updateLanguageUI();
-    updateVisuals(true);
-    releasePanelFocus();
-  });
-
-  // 创建升级粒子特效
-  function spawnUpgradeParticles() {
-    const rect = treeContainer.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    for(let i = 0; i < 40; i++) {
-      const particle = document.createElement('div');
-      particle.className = 'particle bg-yellow-400';
-
-      const size = Math.random() * 8 + 4;
-      particle.style.width = `${size}px`;
-      particle.style.height = `${size}px`;
-
-      particle.style.left = `${centerX}px`;
-      particle.style.top = `${centerY - 50}px`;
-
-      const angle = Math.random() * Math.PI * 2;
-      const distance = Math.random() * 150 + 50;
-      particle.style.setProperty('--vx', `${Math.cos(angle) * distance}px`);
-      particle.style.setProperty('--vy', `${Math.sin(angle) * distance}px`);
-
-      const colors = ['#fbbf24', '#4ade80', '#60a5fa', '#f472b6', '#a78bfa', '#fb923c'];
-      particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-
-      document.body.appendChild(particle);
-      setTimeout(() => particle.remove(), 1000);
-    }
-  }
-
-  // 更新视觉状态 (核心渲染)
-  function updateVisuals(isInit = false) {
-    let state = pathState[currentPath];
-    let stagesData = gameData[currentPath].stages;
-    let newStageIndex = state.stageIndex;
-
-    // UI 主题颜色切换
-    const theme = gameData[currentPath].theme;
-    document.getElementById('ui-title').className = `text-3xl font-black mb-2 drop-shadow-sm transition-colors ${theme.text}`;
-    entityNameEl.className = `font-bold inline-block transition-colors ${theme.nameText}`;
-    progressFill.className = `h-full rounded-full transition-all duration-300 ease-out bg-gradient-to-r ${theme.fill}`;
-
-    // 计算当前属于哪个阶段
-    for (let i = stagesData.length - 1; i >= 0; i--) {
-      if (state.clicks >= stagesData[i].clicks) {
-        newStageIndex = i;
-        break;
-      }
-    }
-
-    // 阶段提升或切路径时更新 SVG
-    if (newStageIndex !== state.stageIndex || isInit) {
-      state.stageIndex = newStageIndex;
-      treeContainer.innerHTML = stagesData[state.stageIndex].svg;
-      applyStagePresentation(state.stageIndex);
-      entityNameEl.innerText = i18n[currentLang].stages[currentPath][state.stageIndex];
-
-      if(!isInit) {
-        entityNameEl.classList.remove('pop-text');
-        void entityNameEl.offsetWidth; // 触发重绘
-        entityNameEl.classList.add('pop-text');
-        spawnUpgradeParticles();
-      }
-    } else {
-      // 如果只是普通点击，确保名字是对的
-      entityNameEl.innerText = i18n[currentLang].stages[currentPath][state.stageIndex];
-    }
-
-    // 更新计数器和进度条
-    clickCountEl.innerText = state.clicks;
-
-    let currentLevelClicks = stagesData[state.stageIndex].clicks;
-    let nextLevelClicks = stagesData[state.stageIndex + 1] ? stagesData[state.stageIndex + 1].clicks : currentLevelClicks;
-
-    if (state.stageIndex === stagesData.length - 1) {
-      progressFill.style.width = '100%';
-      nextGoalEl.innerText = i18n[currentLang].goalReached;
-      nextGoalEl.className = `text-sm font-bold ${theme.text}`;
-    } else {
-      let progress = ((state.clicks - currentLevelClicks) / (nextLevelClicks - currentLevelClicks)) * 100;
-      progressFill.style.width = `${progress}%`;
-      nextGoalEl.className = 'text-sm text-gray-500 font-medium';
-
-      let nextStageName = i18n[currentLang].stages[currentPath][state.stageIndex + 1];
-      let clicksLeft = nextLevelClicks - state.clicks;
-      nextGoalEl.innerText = i18n[currentLang].goalRemaining(clicksLeft, nextStageName);
-    }
-  }
-
-  // 显示浮动的 +1 文字
   function showFloatingText(x, y) {
     const text = document.createElement('div');
     text.className = 'floating-number';
-    text.innerText = '+1';
-    text.style.left = `${x - 15}px`;
-    text.style.top = `${y - 30}px`;
-    text.style.setProperty('--drift', `${(Math.random() - 0.5) * 60}px`);
-
-    gameArea.appendChild(text);
-    setTimeout(() => text.remove(), 800);
+    text.textContent = '+1';
+    text.style.left = `${x - 18}px`;
+    text.style.top = `${y - 26}px`;
+    text.style.setProperty('--drift', `${Math.round((Math.random() - 0.5) * 70)}px`);
+    els.gameArea.appendChild(text);
+    setTimeout(() => text.remove(), 820);
   }
 
-  // 处理点击
-  function handleAction(x, y) {
-    pathState[currentPath].clicks++;
+  function spawnUpgradeParticles() {
+    const rect = els.modelWrap.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height * 0.54;
+    const colors = [pathThemes[state.currentPath].accent, pathThemes[state.currentPath].accent2, pathThemes[state.currentPath].accent3, '#ffffff'];
 
-    clickCountEl.style.transform = 'scale(1.2)';
-    setTimeout(() => clickCountEl.style.transform = 'scale(1)', 100);
+    for (let i = 0; i < 34; i++) {
+      const particle = document.createElement('span');
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 58 + Math.random() * 150;
+      const size = 5 + Math.random() * 9;
+      particle.className = 'particle';
+      particle.style.left = `${centerX}px`;
+      particle.style.top = `${centerY}px`;
+      particle.style.setProperty('--size', `${size}px`);
+      particle.style.setProperty('--vx', `${Math.cos(angle) * distance}px`);
+      particle.style.setProperty('--vy', `${Math.sin(angle) * distance}px`);
+      particle.style.setProperty('--color', colors[Math.floor(Math.random() * colors.length)]);
+      document.body.appendChild(particle);
+      setTimeout(() => particle.remove(), 940);
+    }
+  }
 
+  function registerClick(x, y) {
+    const data = currentData();
+    const previousStage = data.stageIndex;
+    data.clicks += 1;
     showFloatingText(x, y);
-    updateVisuals();
+    els.clickCount.style.transform = 'scale(1.12)';
+    setTimeout(() => { els.clickCount.style.transform = 'scale(1)'; }, 120);
+    updateUI();
+
+    if (data.stageIndex !== previousStage) {
+      spawnUpgradeParticles();
+    }
   }
 
-  // 绑定事件
-  gameArea.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return;
-    // 只排除语言选择器和成长路径选择器，其他区域点击都计数
-    if (e.target.closest('#lang-select') || e.target.closest('#path-select')) return;
-    handleAction(e.clientX, e.clientY);
+  els.pathTabs.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-path]');
+    if (!button) return;
+    switchPath(button.dataset.path);
   });
 
-  gameArea.addEventListener('touchstart', (e) => {
-    // 只排除语言选择器和成长路径选择器
-    if (e.target.closest('#lang-select') || e.target.closest('#path-select')) return;
-    e.preventDefault();
-    Array.from(e.changedTouches).forEach(touch => {
-      handleAction(touch.clientX, touch.clientY);
-    });
-  }, { passive: false });
-
-  document.addEventListener('contextmenu', event => event.preventDefault());
-
-  // 反制措施
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'F12' || e.keyCode === 123) { e.preventDefault(); return false; }
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i')) { e.preventDefault(); return false; }
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'J' || e.key === 'j')) { e.preventDefault(); return false; }
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) { e.preventDefault(); return false; }
+  document.querySelectorAll('.lang-button').forEach((button) => {
+    button.addEventListener('click', () => switchLang(button.dataset.lang));
   });
 
-  setInterval(function() {
-    const before = new Date().getTime();
-    (function(){}).constructor('debugger')();
-    const after = new Date().getTime();
-  }, 2000);
+  els.gameArea.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0 || event.target.closest('.control-surface')) return;
+    registerClick(event.clientX, event.clientY);
+  });
 
-  init();
+  updateUI({ forceModel: true });
 </script>
 </body>
 </html>
