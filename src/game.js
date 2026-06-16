@@ -100,7 +100,7 @@ const i18n = {
   },
   en: {
     kicker: 'Quiet Growth Lab',
-    titles: { tree: 'Tree Planting Click', chicken: 'Chicken Raising Click', house: 'City Building Click' },
+    titles: { tree: 'Boring Click Game', chicken: 'Chicken Click Game', house: 'Building Click Game' },
     subtitle: 'Choose a growth path, then click the world forward',
     tabs: {
       tree: { label: 'Tree', helper: 'Seed to world tree' },
@@ -130,7 +130,7 @@ const i18n = {
 
 const defaultState = {
   currentPath: 'tree',
-  currentLang: 'zh',
+  currentLang: 'en',
   soundEnabled: true,
   paths: {
     tree: { clicks: 0, stageIndex: 0 },
@@ -457,7 +457,9 @@ function updateUI(options = {}) {
 
   applyTheme();
   document.documentElement.lang = state.currentLang === 'zh' ? 'zh-CN' : 'en';
-  document.title = lang.titles[state.currentPath];
+  document.title = state.currentLang === 'en' && state.currentPath !== 'tree'
+    ? `${lang.titles[state.currentPath]} | Boring Click Game`
+    : lang.titles[state.currentPath];
   els.kicker.textContent = lang.kicker;
   els.title.textContent = lang.titles[state.currentPath];
   els.subtitle.textContent = lang.subtitle;

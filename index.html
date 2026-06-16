@@ -1,10 +1,20 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Boring Click Game is a quiet incremental clicker where every click grows trees, chickens, and buildings through playful evolution stages.">
+  <meta name="keywords" content="Boring Click Game, click game, incremental game, idle clicker, browser game">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Boring Click Game">
+  <meta property="og:description" content="Click through calm growth paths and watch simple things evolve into surprising final forms.">
+  <meta property="og:site_name" content="Boring Click Game">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Boring Click Game">
+  <meta name="twitter:description" content="A quiet incremental clicker about growing trees, chickens, and buildings one click at a time.">
   <meta name="theme-color" content="#f7efe2">
-  <title>种树点击模拟器</title>
+  <title>Boring Click Game</title>
   <link rel="stylesheet" href="src/styles.css">
   <script src="src/game.js" defer></script>
 </head>
@@ -20,8 +30,8 @@
   <header class="top-bar">
     <div class="brand" aria-live="polite">
       <p id="ui-kicker" class="brand-kicker">Quiet Growth Lab</p>
-      <h1 id="ui-title" class="brand-title">种树点击模拟器</h1>
-      <p id="ui-subtitle" class="brand-subtitle">选择成长路线，点击世界推进下一阶段</p>
+      <h1 id="ui-title" class="brand-title">Boring Click Game</h1>
+      <p id="ui-subtitle" class="brand-subtitle">Choose a growth path, then click the world forward</p>
     </div>
 
     <div class="top-actions">
@@ -29,8 +39,8 @@
         <span aria-hidden="true">♪</span>
       </button>
       <div class="lang-switch control-surface" role="group" aria-label="Language">
-        <button class="lang-button" type="button" data-lang="zh" aria-pressed="true">中</button>
-        <button class="lang-button" type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button class="lang-button" type="button" data-lang="zh" aria-pressed="false">中</button>
+        <button class="lang-button" type="button" data-lang="en" aria-pressed="true">EN</button>
       </div>
     </div>
   </header>
@@ -39,8 +49,8 @@
     <div id="model-wrap" class="model-wrap" tabindex="0" role="button" aria-label="Click to grow">
       <div class="stage-ring" aria-hidden="true"></div>
       <div class="stage-badge">
-        <span id="stage-index-label">阶段 1 / 8</span>
-        <strong id="entity-name">一颗小种子</strong>
+        <span id="stage-index-label">Stage 1 / 8</span>
+        <strong id="entity-name">A Tiny Seed</strong>
       </div>
       <div id="model-container" class="model-container"></div>
     </div>
@@ -50,17 +60,17 @@
     <div class="stats-panel control-surface">
       <div class="stats-header">
         <div>
-          <p id="stage-label" class="eyebrow">当前阶段</p>
-          <h2 id="stage-name" class="stage-name">一颗小种子</h2>
+          <p id="stage-label" class="eyebrow">Current stage</p>
+          <h2 id="stage-name" class="stage-name">A Tiny Seed</h2>
         </div>
         <div class="click-card" aria-label="Click count">
-          <span id="clicks-label">点击数</span>
+          <span id="clicks-label">Clicks</span>
           <strong id="click-count">0</strong>
         </div>
       </div>
 
       <div class="progress-copy">
-        <span id="next-goal">距离进化为【生根发芽】还需 10 次点击</span>
+        <span id="next-goal">10 clicks until 【Sprouting】</span>
         <span id="progress-percent" class="progress-percent">0%</span>
       </div>
       <div class="progress-track" aria-hidden="true">
@@ -69,8 +79,8 @@
       <div id="milestones" class="milestones" aria-hidden="true"></div>
 
       <div class="stats-footer">
-        <p id="ui-instruction" class="hint">点击屏幕空白处即可成长；每条路线都会自动保存进度。</p>
-        <button id="reset-button" class="reset-button" type="button">重置当前路线</button>
+        <p id="ui-instruction" class="hint">Click open space or press Space to grow. Each path saves automatically.</p>
+        <button id="reset-button" class="reset-button" type="button">Reset path</button>
       </div>
     </div>
 
