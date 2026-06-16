@@ -447,6 +447,12 @@ function updateSoundButton() {
   els.soundToggle.textContent = state.soundEnabled ? '♪' : '×';
 }
 
+function getDocumentTitle(lang) {
+  if (state.currentLang !== 'en') return lang.titles[state.currentPath];
+  if (state.currentPath === 'tree') return 'Boring Click Game - Free Online Clicker Game';
+  return `${lang.titles[state.currentPath]} | Boring Click Game`;
+}
+
 function updateUI(options = {}) {
   const lang = getLang();
   const data = currentData();
@@ -457,9 +463,7 @@ function updateUI(options = {}) {
 
   applyTheme();
   document.documentElement.lang = state.currentLang === 'zh' ? 'zh-CN' : 'en';
-  document.title = state.currentLang === 'en' && state.currentPath !== 'tree'
-    ? `${lang.titles[state.currentPath]} | Boring Click Game`
-    : lang.titles[state.currentPath];
+  document.title = getDocumentTitle(lang);
   els.kicker.textContent = lang.kicker;
   els.title.textContent = lang.titles[state.currentPath];
   els.subtitle.textContent = lang.subtitle;
